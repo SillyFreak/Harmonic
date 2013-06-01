@@ -1,0 +1,16 @@
+package harmonic;
+
+import "at/pria/koza/polybuf/polybuf.proto";
+
+option java_package = "at.pria.koza.harmonic.proto";
+option java_outer_classname = "HarmonicP";
+
+message StateP {
+	extend polybuf.Obj {
+		optional StateP state = 102;
+	}
+	
+	optional uint32			id		= 1;
+	optional uint32 		parent	= 2;
+	optional polybuf.Obj	action	= 3;
+}

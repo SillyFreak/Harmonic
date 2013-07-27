@@ -11,20 +11,39 @@
   deterministic software engine. Each instance has full control over what states
   it wants to send and receive, and what states should be applied to the engine.
  </description>
- 
+
  <properties>
   <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  <maven.compiler.source>1.7</maven.compiler.source>
+  <maven.compiler.target>1.7</maven.compiler.target>
+  <aspectjVer>1.7.3</aspectjVer>
  </properties>
- 
+
  <build>
   <pluginManagement>
    <plugins>
     <plugin>
-     <artifactId>maven-compiler-plugin</artifactId>
-     <version>3.0</version>
+     <groupId>org.eclipse.m2e</groupId>
+     <artifactId>lifecycle-mapping</artifactId>
+     <version>1.0.0</version>
      <configuration>
-      <source>1.7</source>
-      <target>1.7</target>
+      <lifecycleMappingMetadata>
+       <pluginExecutions>
+        <pluginExecution>
+         <pluginExecutionFilter>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>aspectj-maven-plugin</artifactId>
+          <versionRange>[1.4,)</versionRange>
+          <goals>
+           <goal>compile</goal>
+          </goals>
+         </pluginExecutionFilter>
+         <action>
+          <ignore></ignore>
+         </action>
+        </pluginExecution>
+       </pluginExecutions>
+      </lifecycleMappingMetadata>
      </configuration>
     </plugin>
    </plugins>
@@ -47,10 +66,44 @@
      </execution>
     </executions>
    </plugin>
+   <plugin>
+    <groupId>org.codehaus.mojo</groupId>
+    <artifactId>aspectj-maven-plugin</artifactId>
+    <version>1.4</version>
+    <executions>
+     <execution>
+      <goals>
+       <goal>compile</goal>
+      </goals>
+     </execution>
+    </executions>
+    <configuration>
+     <source>${maven.compiler.source}</source>
+     <target>${maven.compiler.target}</target>
+    </configuration>
+    <dependencies>
+     <dependency>
+      <groupId>org.aspectj</groupId>
+      <artifactId>aspectjrt</artifactId>
+      <version>${aspectjVer}</version>
+     </dependency>
+     <dependency>
+      <groupId>org.aspectj</groupId>
+      <artifactId>aspectjtools</artifactId>
+      <version>${aspectjVer}</version>
+     </dependency>
+    </dependencies>
+   </plugin>
   </plugins>
  </build>
 
  <dependencies>
+  <dependency>
+   <groupId>org.aspectj</groupId>
+   <artifactId>aspectjrt</artifactId>
+   <version>${aspectjVer}</version>
+  </dependency>
+
   <dependency>
    <groupId>at.pria.koza</groupId>
    <artifactId>polybuf</artifactId>

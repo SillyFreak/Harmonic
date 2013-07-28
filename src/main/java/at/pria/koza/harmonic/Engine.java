@@ -32,9 +32,7 @@ public class Engine {
      * @param entity the entity to register in this engine
      */
     public void put(Entity entity) {
-        int id = nextId++;
-        entity.setEngine(this, id);
-        entities.put(id, entity);
+        new RegisterEntity(this, entity).apply();
     }
     
     /**
@@ -47,5 +45,29 @@ public class Engine {
      */
     public Entity get(int id) {
         return entities.get(id);
+    }
+    
+    private static class RegisterEntity extends Modification {
+        private final Engine engine;
+        private final Entity entity;
+        
+        public RegisterEntity(Engine engine, Entity entity) {
+            this.engine = engine;
+            this.entity = entity;
+        }
+        
+        @Override
+        protected void apply0() {
+            int id = engine.nextId++;
+            entity.setEngine(engine, id);
+            engine.entities.put(id, entity);
+        }
+        
+        @Override
+        public void revert() {
+            engine.entities.remove(entity.getId());
+            entity.setEngine(null, -1);
+            engine.nextId--;
+        }
     }
 }

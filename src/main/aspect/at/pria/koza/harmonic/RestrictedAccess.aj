@@ -22,7 +22,7 @@ public aspect RestrictedAccess {
      * by the {@link Engine#put(Entity) put()} method, and should be done nowhere else.
      * </p>
      */
-    declare error: !withincode(void Engine.put(Entity)) && call(void Entity.setEngine(Engine, int)):
+    declare error: !within(Engine.RegisterEntity) && call(void Entity.setEngine(Engine, int)):
         "setEngine() must not be called explicitly; it is called by Engine";
     
     /**

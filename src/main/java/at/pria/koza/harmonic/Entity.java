@@ -22,6 +22,8 @@ import java.io.Serializable;
  * @author SillyFreak
  */
 public interface Entity extends Serializable {
+    public void setEngine(Engine engine, int id);
+    
     /**
      * <p>
      * Returns the engine to which this entity belongs.

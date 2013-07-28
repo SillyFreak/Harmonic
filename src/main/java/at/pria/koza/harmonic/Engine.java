@@ -26,24 +26,15 @@ public class Engine {
     
     /**
      * <p>
-     * Returns the next ID to be assigned to an entity belonging to this engine.
-     * </p>
-     * 
-     * @return the next ID to be assigned to an entity belonging to this engine
-     */
-    public int newId() {
-        return nextId++;
-    }
-    
-    /**
-     * <p>
      * Adds an entity to this engine, so that it can be resolved using the assigned ID.
      * </p>
      * 
      * @param entity the entity to register in this engine
      */
     public void put(Entity entity) {
-        entities.put(entity.getId(), entity);
+        int id = nextId++;
+        entity.setEngine(this, id);
+        entities.put(id, entity);
     }
     
     /**

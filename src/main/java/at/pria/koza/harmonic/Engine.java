@@ -26,7 +26,7 @@ public class Engine {
     
     /**
      * <p>
-     * Adds an entity to this engine, so that it can be resolved using the assigned ID.
+     * Adds an entity to this engine, assigning it a unique id.
      * </p>
      * 
      * @param entity the entity to register in this engine

@@ -60,6 +60,8 @@
       </goals>
       <configuration>
        <sources>
+        <source>src/main/aspect</source>
+        <source>src/test/aspect</source>
         <source>${project.build.directory}/generated-sources/protobuf</source>
        </sources>
       </configuration>

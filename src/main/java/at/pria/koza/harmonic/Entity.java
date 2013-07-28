@@ -24,6 +24,16 @@ import java.io.Serializable;
 public interface Entity extends Serializable {
     /**
      * <p>
+     * Sets the engine this entity belongs to, along with its assigned ID
+     * </p>
+     * 
+     * @param engine the engine this entity belongs to
+     * @param id the ID assigned to this entity within its engine
+     */
+    public void setEngine(Engine engine, int id);
+    
+    /**
+     * <p>
      * Returns the engine to which this entity belongs.
      * </p>
      * 

@@ -51,7 +51,9 @@ public abstract class Action {
      * @return the currently active action
      */
     static Action get() {
-        return actions.get().getFirst();
+        Action a = actions.get().peekFirst();
+        if(a == null) throw new IllegalStateException("No action active");
+        return a;
     }
     
     private static void push(Action a) {
@@ -59,7 +61,8 @@ public abstract class Action {
     }
     
     private static void pop(Action a) {
-        Action a0 = actions.get().removeFirst();
+        Action a0 = actions.get().pollFirst();
+        if(a == null) throw new IllegalStateException("No action active");
         assert a == a0;
     }
     

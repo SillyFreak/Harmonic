@@ -18,7 +18,7 @@ package at.pria.koza.harmonic;
  */
 public aspect EntityAspect {
     private Engine Entity.harmonic$engine;
-    private int    Entity.harmonic$id = -1;
+    private int    Entity.harmonic$id;
     
     public void Entity.setEngine(Engine engine, int id) {
         harmonic$engine = engine;

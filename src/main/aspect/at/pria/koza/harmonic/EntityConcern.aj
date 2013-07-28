@@ -17,20 +17,20 @@ package at.pria.koza.harmonic;
  * @author SillyFreak
  */
 public aspect EntityConcern {
-    private Engine Entity.engine;
-    private int    Entity.id;
+    private Engine Entity.harmonic$engine;
+    private int    Entity.harmonic$id;
     
     public void Entity.setEngine(Engine engine, int id) {
-        this.engine = engine;
-        this.id = id;
+        harmonic$engine = engine;
+        harmonic$id = id;
     }
     
     public Engine Entity.getEngine() {
-        return engine;
+        return harmonic$engine;
     }
     
     public int Entity.getId() {
-        return id;
+        return harmonic$id;
     }
     
     /**
@@ -63,7 +63,7 @@ public aspect EntityConcern {
      * @param entity the {@link Entity} being initialized
      */
     before(Engine engine, Entity entity): newEntity(engine, entity) {
-        if(entity.engine == null) engine.put(entity);
+        if(entity.harmonic$engine == null) engine.put(entity);
     }
     
     /**

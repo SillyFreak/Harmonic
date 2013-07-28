@@ -63,10 +63,7 @@ public aspect EntityConcern {
      * @param entity the {@link Entity} being initialized
      */
     before(Engine engine, Entity entity): newEntity(engine, entity) {
-        if(entity.engine == null) {
-            engine.put(entity);
-            System.out.println("before " + thisJoinPointStaticPart);
-        }
+        if(entity.engine == null) engine.put(entity);
     }
     
     /**

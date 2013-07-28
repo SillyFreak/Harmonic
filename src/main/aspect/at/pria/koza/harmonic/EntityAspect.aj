@@ -1,5 +1,5 @@
 /**
- * EntityConcern.aj
+ * EntityAspect.aj
  * 
  * Created on 27.07.2013
  */
@@ -9,14 +9,14 @@ package at.pria.koza.harmonic;
 
 /**
  * <p>
- * {@code EntityConcern} provides inter-type declarations and advices that ensure consistent behavior for all
+ * {@code EntityAspect} provides inter-type declarations and advices that ensure consistent behavior for all
  * {@linkplain Entity entities}.
  * </p>
  * 
  * @version V1.0 27.07.2013
  * @author SillyFreak
  */
-public aspect EntityConcern {
+public aspect EntityAspect {
     private Engine Entity.harmonic$engine;
     private int    Entity.harmonic$id;
     
@@ -76,7 +76,7 @@ public aspect EntityConcern {
      * they don't process this aspect, they also don't get an error for doing so.
      * </p>
      */
-    declare error: !within(EntityConcern) && call(void Engine.put(Entity)):
+    declare error: !within(EntityAspect) && call(void Engine.put(Entity)):
         "put() must not be called explicitly; it is called by an advice of Entity";
     
     /**

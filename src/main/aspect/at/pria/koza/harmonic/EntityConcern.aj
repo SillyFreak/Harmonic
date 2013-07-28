@@ -68,15 +68,6 @@ public aspect EntityConcern {
     
     /**
      * <p>
-     * Declares it as an error to call {@link Entity#setEngine(Engine, int) setEngine()} by yourself. This is done
-     * by the {@link Engine#put(Entity) put()} method, and should be done nowhere else.
-     * </p>
-     */
-    declare error: !within(Engine) && call(public void Entity.setEngine(Engine, int)):
-        "setEngine() must not be called explicitly; it is called by Engine";
-    
-    /**
-     * <p>
      * Declares it as an error to call {@link Engine#put(Entity) put()} by yourself. This is done by this aspect,
      * and should be done nowhere else.
      * </p>
@@ -85,7 +76,7 @@ public aspect EntityConcern {
      * they don't process this aspect, they also don't get an error for doing so.
      * </p>
      */
-    declare error: !within(EntityConcern) && call(public void Engine.put(Entity)):
+    declare error: !within(EntityConcern) && call(void Engine.put(Entity)):
         "put() must not be called explicitly; it is called by an advice of Entity";
     
     /**

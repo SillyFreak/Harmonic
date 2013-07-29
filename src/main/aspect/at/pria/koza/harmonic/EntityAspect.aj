@@ -6,6 +6,8 @@
 
 package at.pria.koza.harmonic;
 
+import static java.lang.String.*;
+
 
 /**
  * <p>
@@ -31,6 +33,10 @@ public aspect EntityAspect {
     
     public int Entity.getId() {
         return harmonic$id;
+    }
+    
+    public String Entity.toString() {
+        return format("%s@%08X:%s", getClass().getSimpleName(), harmonic$id, harmonic$engine);
     }
     
     /**

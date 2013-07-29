@@ -7,6 +7,7 @@
 package at.pria.koza.harmonic;
 
 
+import static java.lang.String.*;
 import at.pria.koza.harmonic.proto.HarmonicP.StateP;
 import at.pria.koza.polybuf.PolybufConfig;
 import at.pria.koza.polybuf.PolybufException;
@@ -70,6 +71,11 @@ public class State implements PolybufSerializable {
     @Override
     public int getTypeId() {
         return FIELD;
+    }
+    
+    @Override
+    public String toString() {
+        return format("%s@%016X: %s", getClass().getSimpleName(), id, action);
     }
     
     private static class IO implements PolybufIO<State> {

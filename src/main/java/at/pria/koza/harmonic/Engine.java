@@ -7,6 +7,8 @@
 package at.pria.koza.harmonic;
 
 
+import static java.lang.String.*;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -135,6 +137,11 @@ public class Engine {
      */
     public Entity get(int id) {
         return entities.get(id);
+    }
+    
+    @Override
+    public String toString() {
+        return format("%s@%08X", getClass().getSimpleName(), id);
     }
     
     private static class RegisterEntity extends Modification {

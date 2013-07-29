@@ -64,7 +64,7 @@ public class State implements PolybufSerializable {
      * @param parent the parent state for this new state
      * @param action the action leading to this new state
      */
-    State(State parent, Action action) {
+    public State(State parent, Action action) {
         this(parent.getEngine(), parent, parent.getEngine().nextStateId(), action);
     }
     

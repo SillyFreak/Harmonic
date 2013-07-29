@@ -80,8 +80,7 @@ public class Engine {
     public Engine(int id) {
         this.id = id;
         nextStateId = (id & 0xFFFFFFFFl) << 32;
-        root = new State(this);
-        setHead(root);
+        head = root = new State(this);
     }
     
     /**

@@ -43,6 +43,7 @@ public class Engine {
     private Map<Integer, Entity> entities     = new HashMap<>();
     
     private final State          root;
+    private Branch               head;
     
     /**
      * <p>
@@ -74,6 +75,11 @@ public class Engine {
     public Engine(int id) {
         this.id = id;
         root = new State(this, null, 0l, null);
+        head = new Branch(root);
+    }
+    
+    long nextStateId() {
+        return nextStateId++;
     }
     
     /**
@@ -92,6 +98,10 @@ public class Engine {
      */
     public int getId() {
         return id;
+    }
+    
+    public Branch getHead() {
+        return head;
     }
     
     /**

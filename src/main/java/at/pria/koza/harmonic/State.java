@@ -52,7 +52,7 @@ public class State implements PolybufSerializable {
      * 
      * @param engine the engine for which this is the root state
      */
-    public State(Engine engine) {
+    State(Engine engine) {
         this(engine, null, 0, null);
     }
     
@@ -64,7 +64,7 @@ public class State implements PolybufSerializable {
      * @param parent the parent state for this new state
      * @param action the action leading to this new state
      */
-    public State(State parent, Action action) {
+    State(State parent, Action action) {
         this(parent.getEngine(), parent, parent.getEngine().nextStateId(), action);
     }
     
@@ -136,6 +136,69 @@ public class State implements PolybufSerializable {
     @Override
     public int getTypeId() {
         return FIELD;
+    }
+    
+    /**
+     * <p>
+     * Computes and returns the nearest common predecessor between this and another state. More formally, this
+     * returns the state that is a predecessor of both {@code this} and {@code other}, but whose children are not.
+     * </p>
+     * <p>
+     * This method may return the root state of the engine, but never {@code null}.
+     * </p>
+     * 
+     * @param other the other state for which to find the nearest common predecessor
+     * @return the nearest common predecessor state
+     * @see <a href="http://twistedoakstudios.com/blog/Post3280__">Algorithm source</a>
+     */
+    public State getCommonPredecessor(State other) {
+        if(getEngine() != other.getEngine()) throw new IllegalArgumentException();
+        
+        //code taken from
+        //http://twistedoakstudios.com/blog/Post3280_intersecting-linked-lists-faster
+        
+        // find *any* common node, and the distances to it
+        State node0 = this, node1 = other;
+        int dist0 = 0, dist1 = 0;
+        int stepSize = 1;
+        
+        while(node0 != node1) {
+            // advance each node progressively farther, watching for the other node
+            for(int i = 0; i < stepSize; i++) {
+                if(node0.getId() == 0) break;
+                if(node0 == node1) break;
+                node0 = node0.getParent();
+                dist0 += 1;
+            }
+            stepSize *= 2;
+            for(int i = 0; i < stepSize; i++) {
+                if(node1.getId() == 0) break;
+                if(node0 == node1) break;
+                node1 = node1.getParent();
+                dist1 += 1;
+            }
+            stepSize *= 2;
+        }
+        
+        node0 = this;
+        node1 = other;
+        // align heads to be an equal distance from the first common node
+        int r = dist1 - dist0;
+        while(r < 0) {
+            node0 = node0.getParent();
+            r += 1;
+        }
+        while(r > 0) {
+            node1 = node1.getParent();
+            r -= 1;
+        }
+        
+        // advance heads until they meet at the first common node
+        while(node0 != node1) {
+            node0 = node0.getParent();
+            node1 = node1.getParent();
+        }
+        return node0;
     }
     
     @Override

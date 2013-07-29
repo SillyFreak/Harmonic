@@ -32,7 +32,7 @@ public aspect RestrictedAccess {
      * </p>
      */
     declare error: !withincode(void Modification.apply()) && call(void Modification.addToAction()):
-        "apply0() must not be called outside of apply()";
+        "addToAction() must not be called outside of apply()";
     
     /**
      * <p>
@@ -50,5 +50,13 @@ public aspect RestrictedAccess {
      */
     declare error: !withincode(void Action.apply()) && call(void Action.apply0()):
         "apply0() must not be called outside of apply()";
+    
+    /**
+     * <p>
+     * Declares it as an error to call {@link Action#apply() apply()} outside of {@link Engine#setHead() setHead()}.
+     * </p>
+     */
+    declare error: !withincode(void Engine.setHead(State)) && call(void Action.apply()):
+        "apply() must not be called explicitly; it is called by Engine";
     
 }

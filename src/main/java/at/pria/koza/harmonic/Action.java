@@ -95,13 +95,13 @@ public abstract class Action {
     
     /**
      * <p>
-     * Applies the action to the engine. This method invokes {@link #apply0()}, surrounded by calls to
-     * {@link #push(Action)}, and {@link #pop(Action)} in a {@code finally} block to always leave the action stack
-     * in a well defined way. Note that this does not mean that the engine, too, will be in a defined state; see
-     * {@link #apply0()}.
+     * Applies the action to the engine. This method should only be called by {@link Engine#setHead(State)}. This
+     * method invokes {@link #apply0()}, surrounded by calls to {@link #push(Action)}, and {@link #pop(Action)} in
+     * a {@code finally} block to always leave the action stack in a well defined way. Note that this does not mean
+     * that the engine, too, will be in a defined state; see {@link #apply0()}.
      * </p>
      */
-    public void apply() {
+    void apply() {
         try {
             push(this);
             apply0();

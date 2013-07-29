@@ -7,6 +7,9 @@
 package at.pria.koza.harmonic;
 
 
+import static java.lang.String.*;
+
+
 /**
  * <p>
  * {@code EntityAspect} provides inter-type declarations and advices that ensure consistent behavior for all
@@ -31,6 +34,10 @@ public aspect EntityAspect {
     
     public int Entity.getId() {
         return harmonic$id;
+    }
+    
+    public String Entity.toString() {
+        return format("%s@%08X:%s", getClass().getSimpleName(), harmonic$id, harmonic$engine);
     }
     
     /**
@@ -63,21 +70,21 @@ public aspect EntityAspect {
      * @param entity the {@link Entity} being initialized
      */
     before(Engine engine, Entity entity): newEntity(engine, entity) {
-        if(entity.harmonic$engine == null) engine.put(entity);
+        if(entity.harmonic$engine == null) engine.putEntity(entity);
     }
     
     /**
      * <p>
-     * Declares it as an error to call {@link Engine#put(Entity) put()} by yourself. This is done by this aspect,
-     * and should be done nowhere else.
+     * Declares it as an error to call {@link Engine#putEntity(Entity) putEntity()} by yourself. This is done by
+     * this aspect, and should be done nowhere else.
      * </p>
      * <p>
      * Note that projects that do not process this library's aspects have to call the method themselves; but as
      * they don't process this aspect, they also don't get an error for doing so.
      * </p>
      */
-    declare error: !within(EntityAspect) && call(void Engine.put(Entity)):
-        "put() must not be called explicitly; it is called by an advice of Entity";
+    declare error: !within(EntityAspect) && call(void Engine.putEntity(Entity)):
+        "putEntity() must not be called explicitly; it is called by an advice of Entity";
     
     /**
      * <p>

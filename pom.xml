@@ -4,7 +4,7 @@
 
  <groupId>at.pria.koza</groupId>
  <artifactId>harmonic</artifactId>
- <version>0.0.2</version>
+ <version>0.0.3</version>
  <name>Harmonic</name>
  <description>
   Harmonic is a library for synchronizing state across multiple instances of a
@@ -95,6 +95,35 @@
       <version>${aspectjVer}</version>
      </dependency>
     </dependencies>
+   </plugin>
+   <plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-source-plugin</artifactId>
+    <executions>
+     <execution>
+      <id>default-source</id>
+      <phase>package</phase>
+      <goals>
+       <goal>jar-no-fork</goal>
+      </goals>
+     </execution>
+    </executions>
+   </plugin>
+   <plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-javadoc-plugin</artifactId>
+    <configuration>
+     <overview>overview.html</overview>
+    </configuration>
+    <executions>
+     <execution>
+      <id>default-javadoc</id>
+      <phase>package</phase>
+      <goals>
+       <goal>jar</goal>
+      </goals>
+     </execution>
+    </executions>
    </plugin>
   </plugins>
  </build>

@@ -70,6 +70,13 @@ public abstract class Action {
     private final Engine             engine;
     private final List<Modification> modifications;
     
+    /**
+     * <p>
+     * Creates a new action that modifies the given engine.
+     * </p>
+     * 
+     * @param engine the engine that is modified by this action
+     */
     public Action(Engine engine) {
         this.engine = engine;
         modifications = new LinkedList<Modification>();

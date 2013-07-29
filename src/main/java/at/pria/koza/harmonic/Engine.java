@@ -81,6 +81,13 @@ public class Engine {
         setHead(root);
     }
     
+    /**
+     * <p>
+     * Returns the next ID to be assigned to a state created by this engine.
+     * </p>
+     * 
+     * @return the next ID to be used for a state created by this engine
+     */
     long nextStateId() {
         return nextStateId++;
     }
@@ -103,15 +110,38 @@ public class Engine {
         return id;
     }
     
+    /**
+     * <p>
+     * Moves this engine's head to the given state.
+     * </p>
+     * 
+     * @param head the engine's new head state
+     */
     public void setHead(State head) {
         setHead(new Branch(head));
     }
     
+    /**
+     * <p>
+     * Moves this engine's head to the given branch.
+     * </p>
+     * 
+     * TODO the head is the current state. Moving the head means changing the engine. do this
+     * 
+     * @param head the engine's new head branch
+     */
     public void setHead(Branch head) {
         if(head == null) throw new IllegalArgumentException();
         this.head = head;
     }
     
+    /**
+     * <p>
+     * Returns this engine's head branch.
+     * </p>
+     * 
+     * @return this engine's head branch
+     */
     public Branch getHead() {
         return head;
     }

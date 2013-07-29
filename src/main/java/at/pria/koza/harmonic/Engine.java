@@ -37,8 +37,12 @@ public class Engine {
     }
     
     private int                  id;
-    private int                  nextId   = 0;
-    private Map<Integer, Entity> entities = new HashMap<>();
+    private long                 nextStateId  = id << 32;
+    
+    private int                  nextEntityId = 0;
+    private Map<Integer, Entity> entities     = new HashMap<>();
+    
+    private final State          root;
     
     /**
      * <p>
@@ -69,6 +73,7 @@ public class Engine {
      */
     public Engine(int id) {
         this.id = id;
+        root = new State(this, null, 0l, null);
     }
     
     /**
@@ -123,7 +128,7 @@ public class Engine {
         
         @Override
         protected void apply0() {
-            int id = engine.nextId++;
+            int id = engine.nextEntityId++;
             entity.setEngine(engine, id);
             engine.entities.put(id, entity);
         }
@@ -132,7 +137,7 @@ public class Engine {
         public void revert() {
             engine.entities.remove(entity.getId());
             entity.setEngine(null, -1);
-            engine.nextId--;
+            engine.nextEntityId--;
         }
     }
 }

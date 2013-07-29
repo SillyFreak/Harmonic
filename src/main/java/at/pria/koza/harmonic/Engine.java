@@ -9,7 +9,9 @@ package at.pria.koza.harmonic;
 
 import static java.lang.String.*;
 
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
 
@@ -45,7 +47,7 @@ public class Engine {
     private Map<Integer, Entity> entities     = new HashMap<>();
     
     private final State          root;
-    private Branch               head;
+    private State                head;
     
     /**
      * <p>
@@ -118,48 +120,35 @@ public class Engine {
      * @param head the engine's new head state
      */
     public void setHead(State head) {
-        setHead(new Branch(head));
-    }
-    
-    /**
-     * <p>
-     * Moves this engine's head to the given branch.
-     * </p>
-     * 
-     * TODO the head is the current state. Moving the head means changing the engine. do this
-     * 
-     * @param head the engine's new head branch
-     */
-    public void setHead(Branch head) {
         if(head == null) throw new IllegalArgumentException();
+        
+        //common predecessor
+        State pred = this.head.getCommonPredecessor(head);
+        
+        //roll back to pred
+        for(State current = this.head; current != pred; current = current.getParent())
+            current.getAction().revert();
+        
+        //move forward to new head
+        Deque<State> states = new LinkedList<>();
+        for(State current = head; current != pred; current = current.getParent())
+            states.addFirst(current);
+        for(State current:states)
+            current.getAction().apply();
+        
+        //set new head
         this.head = head;
     }
     
     /**
      * <p>
-     * Returns this engine's head branch.
+     * Returns this engine's head state.
      * </p>
      * 
-     * @return this engine's head branch
+     * @return this engine's head state
      */
-    public Branch getHead() {
+    public State getHead() {
         return head;
-    }
-    
-    /**
-     * <p>
-     * Executes and returns the given action. If the action is successful (i.e. no exception is thrown), the action
-     * is {@linkplain Branch#append(Action) appended} to the {@link #getHead() head} branch.
-     * </p>
-     * 
-     * @param action
-     * @return
-     */
-    public <T extends Action> T execute(T action) {
-        if(action.getEngine() != this) throw new IllegalArgumentException();
-        action.apply();
-        getHead().append(action);
-        return action;
     }
     
     /**

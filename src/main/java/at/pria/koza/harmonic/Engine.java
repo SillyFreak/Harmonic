@@ -46,7 +46,6 @@ public class Engine {
     private int                  nextEntityId = 0;
     private Map<Integer, Entity> entities     = new HashMap<>();
     
-    private final State          root;
     private State                head;
     private Map<Long, State>     states       = new HashMap<>();
     
@@ -80,7 +79,7 @@ public class Engine {
     public Engine(int id) {
         this.id = id;
         nextStateId = (id & 0xFFFFFFFFl) << 32;
-        head = root = new State(this);
+        head = new State(this);
     }
     
     /**

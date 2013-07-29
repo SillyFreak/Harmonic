@@ -9,6 +9,7 @@ package at.pria.koza.harmonic;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 
 /**
@@ -21,8 +22,72 @@ import java.util.Map;
  * @author SillyFreak
  */
 public class Engine {
+    private static Random random;
+    
+    private static Random getRandom() {
+        if(random == null) random = new Random();
+        return random;
+    }
+    
+    private static int nextNonZeroInt() {
+        Random r = getRandom();
+        int result;
+        for(;;)
+            if((result = r.nextInt()) != 0) return result;
+    }
+    
+    private int                  id;
     private int                  nextId   = 0;
     private Map<Integer, Entity> entities = new HashMap<>();
+    
+    /**
+     * <p>
+     * Creates a non-spectating engine.
+     * </p>
+     */
+    public Engine() {
+        this(false);
+    }
+    
+    /**
+     * <p>
+     * Creates an engine.
+     * </p>
+     * 
+     * @param spectating whether this engine will only spectate or also execute actions
+     */
+    public Engine(boolean spectating) {
+        this(spectating? 0:nextNonZeroInt());
+    }
+    
+    /**
+     * <p>
+     * Creates an engine with the given ID. Spectating engines have an ID equal to zero.
+     * </p>
+     * 
+     * @param id the engine's ID.
+     */
+    public Engine(int id) {
+        this.id = id;
+    }
+    
+    /**
+     * <p>
+     * Returns this engine's ID. An engine that is only spectating (i.e. receiving actions, but not sending any)
+     * may have an ID of 0. Other engines have a non-zero random 32 bit ID.
+     * </p>
+     * <p>
+     * This ID is used to prevent conflicts in IDs of states created by this engine: Instead of assigning random
+     * IDs to states and hoping that no state IDs in an engine's execution ever clash, random IDs are only assigned
+     * to engines, and states get IDs based on these. As the set of engines is relatively stable during the
+     * execution of an application, as opposed to the set of states, this scheme is safer.
+     * </p>
+     * 
+     * @return this engine's ID
+     */
+    public int getId() {
+        return id;
+    }
     
     /**
      * <p>

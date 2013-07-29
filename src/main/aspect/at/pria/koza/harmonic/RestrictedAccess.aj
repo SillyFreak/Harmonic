@@ -19,7 +19,7 @@ public aspect RestrictedAccess {
     /**
      * <p>
      * Declares it as an error to call {@link Entity#setEngine(Engine, int) setEngine()} by yourself. This is done
-     * by the {@link Engine#put(Entity) put()} method, and should be done nowhere else.
+     * by the {@link Engine#putEntity(Entity) putEntity()} method, and should be done nowhere else.
      * </p>
      */
     declare error: !within(Engine.RegisterEntity) && call(void Entity.setEngine(Engine, int)):

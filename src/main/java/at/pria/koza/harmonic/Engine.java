@@ -158,7 +158,7 @@ public class Engine {
      * 
      * @param entity the entity to register in this engine
      */
-    public void put(Entity entity) {
+    public void putEntity(Entity entity) {
         new RegisterEntity(this, entity).apply();
     }
     
@@ -170,7 +170,7 @@ public class Engine {
      * @param id the ID to resolve
      * @return the entity that is associated with the ID, or {@code null}
      */
-    public Entity get(int id) {
+    public Entity getEntity(int id) {
         return entities.get(id);
     }
     

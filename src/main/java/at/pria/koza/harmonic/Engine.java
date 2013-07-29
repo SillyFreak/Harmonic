@@ -37,7 +37,7 @@ public class Engine {
     }
     
     private int                  id;
-    private long                 nextStateId  = id << 32;
+    private long                 nextStateId;
     
     private int                  nextEntityId = 0;
     private Map<Integer, Entity> entities     = new HashMap<>();
@@ -74,8 +74,9 @@ public class Engine {
      */
     public Engine(int id) {
         this.id = id;
+        nextStateId = (id & 0xFFFFFFFFl) << 32;
         root = new State(this, null, 0l, null);
-        head = new Branch(root);
+        setHead(root);
     }
     
     long nextStateId() {
@@ -98,6 +99,15 @@ public class Engine {
      */
     public int getId() {
         return id;
+    }
+    
+    public void setHead(State head) {
+        setHead(new Branch(head));
+    }
+    
+    public void setHead(Branch head) {
+        if(head == null) throw new IllegalArgumentException();
+        this.head = head;
     }
     
     public Branch getHead() {

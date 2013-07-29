@@ -118,6 +118,22 @@ public class Engine {
     
     /**
      * <p>
+     * Executes and returns the given action. If the action is successful (i.e. no exception is thrown), the action
+     * is {@linkplain Branch#append(Action) appended} to the {@link #getHead() head} branch.
+     * </p>
+     * 
+     * @param action
+     * @return
+     */
+    public <T extends Action> T execute(T action) {
+        if(action.getEngine() != this) throw new IllegalArgumentException();
+        action.apply();
+        getHead().append(action);
+        return action;
+    }
+    
+    /**
+     * <p>
      * Adds an entity to this engine, assigning it a unique id.
      * </p>
      * 

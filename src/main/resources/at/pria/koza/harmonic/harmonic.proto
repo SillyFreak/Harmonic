@@ -7,10 +7,10 @@ option java_outer_classname = "HarmonicP";
 
 message StateP {
 	extend polybuf.Obj {
-		optional StateP state = 102;
+		optional StateP state = 100;
 	}
 	
-	optional uint32			id		= 1;
-	optional uint32 		parent	= 2;
+	optional fixed64		id		= 1;
+	optional fixed64 		parent	= 2;
 	optional polybuf.Obj	action	= 3;
 }

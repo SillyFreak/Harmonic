@@ -48,6 +48,7 @@ public class Engine {
     
     private final State          root;
     private State                head;
+    private Map<Long, State>     states       = new HashMap<>();
     
     /**
      * <p>
@@ -172,6 +173,31 @@ public class Engine {
      */
     public Entity getEntity(int id) {
         return entities.get(id);
+    }
+    
+    /**
+     * <p>
+     * Adds a state to this engine.
+     * </p>
+     * 
+     * @param state the state to be added
+     */
+    void putState(State state) {
+        Long id = state.getId();
+        if(states.containsKey(id)) throw new IllegalStateException();
+        states.put(id, state);
+    }
+    
+    /**
+     * <p>
+     * Returns the state associated with the given ID.
+     * </p>
+     * 
+     * @param id the ID to resolve
+     * @return the state that is associated with the ID, or {@code null}
+     */
+    public State getState(long id) {
+        return states.get(id);
     }
     
     @Override

@@ -84,6 +84,7 @@ public class State implements PolybufSerializable {
         this.id = id;
         this.parent = parent;
         this.action = action;
+        engine.putState(this);
     }
     
     /**
@@ -227,9 +228,7 @@ public class State implements PolybufSerializable {
         public State initialize(PolybufInput in, Obj obj) throws PolybufException {
             StateP p = obj.getExtension(EXTENSION);
             long id = p.getId();
-            long parentId = p.getParent();
-            //TODO resolve the parentId
-            State parent = null;
+            State parent = engine.getState(p.getParent());
             //the action won't have a reference to this state, so this line is safe
             Action action = (Action) in.readObject(p.getAction());
             

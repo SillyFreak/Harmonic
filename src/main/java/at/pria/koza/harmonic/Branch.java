@@ -68,6 +68,6 @@ public class Branch {
     public void append(Action action) {
         if(action == null) throw new IllegalArgumentException();
         if(action.getEngine() != state.getEngine()) throw new IllegalArgumentException();
-        state = new State(state.getEngine(), state, state.getEngine().nextStateId(), action);
+        state = new State(state, action);
     }
 }

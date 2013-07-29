@@ -45,25 +45,90 @@ public class State implements PolybufSerializable {
     private final State  parent;
     private final Action action;
     
-    public State(Engine engine, State parent, long id, Action action) {
+    /**
+     * <p>
+     * Creates a root state for the given engine.
+     * </p>
+     * 
+     * @param engine the engine for which this is the root state
+     */
+    public State(Engine engine) {
+        this(engine, null, 0, null);
+    }
+    
+    /**
+     * <p>
+     * Creates a new state, using the {@linkplain Engine#nextStateId() next generated state ID} for that engine.
+     * </p>
+     * 
+     * @param parent the parent state for this new state
+     * @param action the action leading to this new state
+     */
+    public State(State parent, Action action) {
+        this(parent.getEngine(), parent, parent.getEngine().nextStateId(), action);
+    }
+    
+    /**
+     * <p>
+     * This constructor is only directly called by the {@link IO}. In contrast to a newly created state, a
+     * deserialized state has an ID assigned by a different engine.
+     * </p>
+     * 
+     * @param engine the engine for which this state is created/deserialized
+     * @param parent the parent state for this state
+     * @param id the ID assigned to this state by the engine that originally created it
+     * @param action the action leading to this state
+     */
+    private State(Engine engine, State parent, long id, Action action) {
         this.engine = engine;
         this.id = id;
         this.parent = parent;
         this.action = action;
     }
     
+    /**
+     * <p>
+     * Returns the engine in which this state resides. This may be different from the engine which originally
+     * created the state.
+     * </p>
+     * 
+     * @return the engine in which this state resides
+     */
     public Engine getEngine() {
         return engine;
     }
     
+    /**
+     * <p>
+     * Returns the unique ID assigned to this state. For the root state of any engine, this is zero. Otherwise, the
+     * upper four bytes identify the original engine that created it, the lower four bytes is a sequentially
+     * assigned number chosen by that engine.
+     * </p>
+     * 
+     * @return the unique ID assigned to this state
+     */
     public long getId() {
         return id;
     }
     
+    /**
+     * <p>
+     * Returns this state's parent. Only the root state has {@code null} as its parent.
+     * </p>
+     * 
+     * @return this state's parent
+     */
     public State getParent() {
         return parent;
     }
     
+    /**
+     * <p>
+     * Returns the action that led from the parent to this state.
+     * </p>
+     * 
+     * @return the action that led from the parent to this state
+     */
     public Action getAction() {
         return action;
     }

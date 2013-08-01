@@ -114,6 +114,17 @@ public class State implements PolybufSerializable {
     
     /**
      * <p>
+     * Returns the id of the engine that created this state, extracted from this state's id.
+     * </p>
+     * 
+     * @return
+     */
+    public int getEngineId() {
+        return (int) (id >> 32);
+    }
+    
+    /**
+     * <p>
      * Returns this state's parent. Only the root state has {@code null} as its parent.
      * </p>
      * 

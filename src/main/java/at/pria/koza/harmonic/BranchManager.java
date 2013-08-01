@@ -9,6 +9,7 @@ package at.pria.koza.harmonic;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
@@ -167,6 +168,80 @@ public class BranchManager {
         
         MetaState[] head = branches.get(branch);
         head[0] = newHead;
+    }
+    
+    //send branch sync
+    
+    /**
+     * <p>
+     * Determines which data has to be sent to the {@link BranchManager} identified by {@code engine} to update the
+     * given branch. If there is anything to update, this method provides this data to the caller through
+     * {@link SyncCallback#sendUpdateCallback(int, String, Obj, long...) callback.sendUpdateCallback()}.
+     * </p>
+     * 
+     * @param engine the engine which should be updated
+     * @param branch the branch for which updates should be provided
+     * @param callback a callback to provide the data to the caller
+     */
+    public void sendUpdate(int engine, String branch, SyncCallback callback) {
+        MetaState[] head = branches.get(branch);
+        if(head == null || head[0] == null) throw new IllegalArgumentException();
+        
+        MetaState state = head[0];
+        state.addEngine(engine);
+        Integer id = engine;
+        while(state != null && !state.engines.contains(id))
+            state = state.parent;
+        if(state == head[0]) return;
+        
+        long[] ancestors = state == null? new long[0]:new long[] {state.stateId};
+        callback.sendUpdateCallback(this.engine.getId(), branch, serialize(head[0]), ancestors);
+    }
+    
+    /**
+     * <p>
+     * Determines which states are missing at the {@link BranchManager} identified by {@code engine} provided the
+     * known ancestor. If there is anything to update, this method provides this data to the caller through
+     * {@link SyncCallback#sendMissingCallback(int, String, long, Obj...) callback.sendMissingCallback()}.
+     * </p>
+     * 
+     * @param engine the engine which should be updated
+     * @param branch the branch for which updates should be provided
+     * @param ancestor the ancestor the remote branch manager reported it knew
+     * @param callback a callback to provide the data to the caller
+     */
+    public void sendMissing(int engine, String branch, long ancestor, SyncCallback callback) {
+        MetaState[] head = branches.get(branch);
+        if(head == null || head[0] == null) throw new IllegalArgumentException();
+        
+        long headId = head[0].stateId;
+        if(headId == ancestor) return;
+        
+        LinkedList<Obj> ancestors = new LinkedList<>();
+        for(MetaState state = head[0].parent; state.stateId != ancestor; state = state.parent) {
+            ancestors.addFirst(serialize(state));
+        }
+        
+        callback.sendMissingCallback(this.engine.getId(), branch, headId,
+                ancestors.toArray(new Obj[ancestors.size()]));
+    }
+    
+    public static interface SyncCallback {
+        /**
+         * <p>
+         * Reports the data needed to call {@link BranchManager#receiveUpdate(int, String, Obj, long...)
+         * receiveUpdate()} on the receiving BranchManager.
+         * </p>
+         */
+        public void sendUpdateCallback(int engine, String branch, Obj state, long... ancestors);
+        
+        /**
+         * <p>
+         * Reports the data needed to call {@link BranchManager#receiveMissing(int, String, long, Obj...)
+         * receiveMissing()} on the receiving BranchManager.
+         * </p>
+         */
+        public void sendMissingCallback(int engine, String branch, long state, Obj... ancestors);
     }
     
     //state mgmt

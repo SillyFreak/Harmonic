@@ -120,9 +120,12 @@ public class BranchManager {
         put(newHead);
         if(newHead.resolve()) {
             //we have all we need
+            newHead.addEngine(engine);
+            
             MetaState[] head = branches.get(branch);
             if(head == null) branches.put(branch, head = new MetaState[1]);
             head[0] = newHead;
+            
             return newHead.stateId;
             
         } else {
@@ -155,10 +158,12 @@ public class BranchManager {
             MetaState s = deserialize(obj);
             put(s);
             if(!s.resolve()) throw new AssertionError();
+            s.addEngine(engine);
         }
         
         MetaState newHead = states.get(state);
         if(!newHead.resolve()) throw new AssertionError();
+        newHead.addEngine(engine);
         
         MetaState[] head = branches.get(branch);
         head[0] = newHead;
@@ -209,7 +214,7 @@ public class BranchManager {
          */
         public MetaState(State state) {
             this.state = state;
-            engines.add(engine.getId());
+            addEngine(engine.getId());
             
             stateId = state.getId();
             if(stateId != 0) {
@@ -254,10 +259,14 @@ public class BranchManager {
             if(parent == null || !parent.resolve()) return false;
             
             state = new State(parent.state, action);
-            engines.add(engine.getId());
-            engines.add(state.getEngineId());
+            addEngine(engine.getId());
+            addEngine(state.getEngineId());
             
             return true;
+        }
+        
+        public void addEngine(int id) {
+            engines.add(id);
         }
     }
     

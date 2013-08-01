@@ -192,6 +192,7 @@ public class BranchManager {
             MetaState[] head = branches.get(branch);
             if(head == null) branches.put(branch, head = new MetaState[1]);
             head[0] = newHead;
+            if(currentBranch.equals(branch)) this.engine.setHead(head[0].state);
             
             return newHead.stateId;
             
@@ -234,6 +235,7 @@ public class BranchManager {
         
         MetaState[] head = branches.get(branch);
         head[0] = newHead;
+        if(currentBranch.equals(branch)) this.engine.setHead(head[0].state);
     }
     
     //send branch sync
@@ -254,12 +256,12 @@ public class BranchManager {
         if(head == null || head[0] == null) throw new IllegalArgumentException();
         
         MetaState state = head[0];
-        state.addEngine(engine);
         Integer id = engine;
         while(state != null && !state.engines.contains(id))
             state = state.parent;
         if(state == head[0]) return;
         
+        head[0].addEngine(engine);
         long[] ancestors = state == null? new long[0]:new long[] {state.stateId};
         callback.sendUpdateCallback(this.engine.getId(), branch, serialize(head[0]), ancestors);
     }
@@ -285,6 +287,7 @@ public class BranchManager {
         
         LinkedList<Obj> ancestors = new LinkedList<>();
         for(MetaState state = head[0].parent; state.stateId != ancestor; state = state.parent) {
+            state.addEngine(engine);
             ancestors.addFirst(serialize(state));
         }
         

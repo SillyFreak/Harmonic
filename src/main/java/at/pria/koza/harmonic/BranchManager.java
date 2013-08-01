@@ -119,6 +119,23 @@ public class BranchManager {
         return 0;
     }
     
+    /**
+     * <p>
+     * Receives the missing states for a previous {@link #receiveUpdate(int, String, Obj, long...) receiveUpdate()}
+     * call. The BranchManager does not save any transient state between {@code receiveUpdate()} and
+     * {@code receiveMissing()}, so some information must be added to the parameters again: the source of the
+     * update; and the branch being updated. To find again the state which was already received, the id of the head
+     * state of the update must be transmitted again. In addition, a list of states containing the delta between
+     * the remote and this BranchManager's branch is transmitted.
+     * </p>
+     * 
+     * @param engine the id of the offering BranchManager's engine
+     * @param branch the branch this update belongs to
+     * @param state the id of the state being the tip of this update
+     * @param ancestors a list of ancestor states that is missing from the local branch
+     */
+    public void receiveMissing(int engine, String branch, long state, Obj... ancestors) {}
+    
     //state mgmt
     
     private MetaState put(State state) {

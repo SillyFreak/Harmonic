@@ -45,8 +45,9 @@ public class BranchManager {
     private final Map<String, MetaState[]> branches = new HashMap<>();
     private final Map<Long, MetaState>     states   = new HashMap<>();
     private final PolybufConfig            config   = new PolybufConfig();
+    private String                         currentBranch;
     
-    //ctors
+    //ctors & misc
     
     /**
      * <p>
@@ -92,10 +93,71 @@ public class BranchManager {
      */
     private BranchManager(Engine engine) {
         this.engine = engine;
-        //put the root
-        put(engine.getState(0l));
-        
         configure(config);
+        
+        //put the root
+        currentBranch = "default";
+        createBranch(currentBranch, engine.getState(0l));
+    }
+    
+    /**
+     * <p>
+     * Returns the engine underlying this BranchManager. The engine must not be modified mannually.
+     * </p>
+     * 
+     * @return
+     */
+    public Engine getEngine() {
+        return engine;
+    }
+    
+    /**
+     * <p>
+     * Returns the {@link PolybufConfig} used by this BranchManager to serialize and deserialize states (and thus
+     * also actions). A custom {@link PolybufIO IO} for {@linkplain State states} is already registered, and must
+     * not be overwritten!
+     * </p>
+     * 
+     * @return the {@link PolybufConfig} used by this BranchManager
+     */
+    public PolybufConfig getConfig() {
+        return config;
+    }
+    
+    //branch mgmt
+    
+    public void createBranchHere(String branch) {
+        createBranch(branch, getBranchTip(currentBranch));
+    }
+    
+    public void createBranch(String branch, State state) {
+        if(state.getEngine() != engine) throw new IllegalArgumentException();
+        if(branches.containsKey(branch)) throw new IllegalArgumentException();
+        branches.put(branch, new MetaState[] {put(state)});
+    }
+    
+    public State getBranchTip(String branch) {
+        MetaState[] tip = branches.get(branch);
+        if(tip == null) throw new IllegalArgumentException();
+        return tip[0].state;
+    }
+    
+    public String getCurrentBranch() {
+        return currentBranch;
+    }
+    
+    public void setCurrentBranch(String branch) {
+        State tip = getBranchTip(branch);
+        engine.setHead(tip);
+        currentBranch = branch;
+    }
+    
+    public <T extends Action> T execute(T action) {
+        MetaState[] tip = branches.get(currentBranch);
+        State state = new State(tip[0].state, action);
+        engine.setHead(state);
+        tip[0] = put(state);
+        return action;
     }
     
     //receive branch sync
@@ -363,19 +425,6 @@ public class BranchManager {
     }
     
     //polybuf
-    
-    /**
-     * <p>
-     * Returns the {@link PolybufConfig} used by this BranchManager to serialize and deserialize states (and thus
-     * also actions). A custom {@link PolybufIO IO} for {@linkplain State states} is already registered, and must
-     * not be overwritten!
-     * </p>
-     * 
-     * @return the {@link PolybufConfig} used by this BranchManager
-     */
-    public PolybufConfig getConfig() {
-        return config;
-    }
     
     private PolybufIO<MetaState> getIO() {
         return new IO();

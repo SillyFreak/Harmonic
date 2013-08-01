@@ -23,10 +23,19 @@ import at.pria.koza.polybuf.proto.Polybuf.Obj;
 
 /**
  * <p>
- * {@code BranchManager}
+ * A {@code BranchManager} is a wrapper for an {@link Engine}. It enables easy and efficient synchronization
+ * between multiple BranchManagers by managing metadata for the states in the engine, and named branches for which
+ * updates may be published between engines. At the moment, a branch manager does not operate on existing and
+ * possibly already modified engines. Instead, it creates a new engine and controls all access to it. This may
+ * change in the future.
+ * </p>
+ * <p>
+ * This class does not provide network protocols for achieving this ends. It is the backend containing logic to
+ * create and process the information necessary for such messages, but does not mandate any specific protocol
+ * formats to be used to transport that information.
  * </p>
  * 
- * @version V0.0 29.07.2013
+ * @version V1.0 29.07.2013
  * @author SillyFreak
  */
 public class BranchManager {
@@ -34,18 +43,48 @@ public class BranchManager {
     private final Map<String, MetaState[]> branches = new HashMap<>();
     private final Map<Long, MetaState>     states   = new HashMap<>();
     
+    /**
+     * <p>
+     * Creates a new branch manager
+     * </p>
+     * 
+     * @see Engine#Engine()
+     */
     public BranchManager() {
         this(new Engine());
     }
     
+    /**
+     * <p>
+     * Creates a new branch manager.
+     * </p>
+     * 
+     * @param spectating whether the engine will only spectate or also execute actions
+     * 
+     * @see Engine#Engine(boolean)
+     */
     public BranchManager(boolean spectating) {
         this(new Engine(spectating));
     }
     
+    /**
+     * <p>
+     * Creates a new branch manager.
+     * </p>
+     * 
+     * @param id the ID to be used for the engine
+     * 
+     * @see Engine#Engine(int)
+     */
     public BranchManager(int id) {
         this(new Engine(id));
     }
     
+    /**
+     * <p>
+     * Creates a new branch manager.
+     * </p>
+     */
     private BranchManager(Engine engine) {
         this.engine = engine;
         //put the root
@@ -80,8 +119,17 @@ public class BranchManager {
         //set of engines known to know this meta state
         private final Set<Integer> engines = new HashSet<>();
         
+        /**
+         * <p>
+         * Used to add states created by the engine managed by this branch manager.
+         * </p>
+         * 
+         * @param state the state to be added
+         */
         public MetaState(State state) {
             this.state = state;
+            engines.add(engine.getId());
+            
             stateId = state.getId();
             if(stateId != 0) {
                 State parentState = state.getParent();
@@ -92,18 +140,42 @@ public class BranchManager {
             }
         }
         
+        /**
+         * <p>
+         * Used to add states received from an engine other than managed by this branch manager.
+         * {@linkplain #resolve() Resolving} will be necessary before this MetaState can be used.
+         * </p>
+         * 
+         * @param state the protobuf serialized form of the state to be added
+         * @param action the action extracted from that protobuf extension
+         */
         public MetaState(StateP state, Action action) {
             stateId = state.getId();
             parentId = state.getParent();
             this.action = action;
         }
         
+        /**
+         * <p>
+         * Resolves this state. Returns true when the MetaState is now fully initialized, false if it is still not.
+         * This method must be called for states received from another engine, as the parent state may not be
+         * present at the time it is received. After all necessary ancestor states were received, then resolving
+         * will be successful and the state will be added to the underlying engine.
+         * </p>
+         * 
+         * @return {@code true} if the MetaState was resolved, so that there is now a corresponding {@link State}
+         *         in the underlying engine; {@code false} otherwise
+         */
         public boolean resolve() {
             if(state != null) return true;
             assert stateId != 0;
             if(parent == null) parent = states.get(parentId);
             if(parent == null || !parent.resolve()) return false;
+            
             state = new State(parent.state, action);
+            engines.add(engine.getId());
+            engines.add(state.getEngineId());
+            
             return true;
         }
     }

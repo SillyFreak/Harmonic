@@ -43,6 +43,8 @@ public class BranchManager {
     private final Map<String, MetaState[]> branches = new HashMap<>();
     private final Map<Long, MetaState>     states   = new HashMap<>();
     
+    //ctors
+    
     /**
      * <p>
      * Creates a new branch manager
@@ -88,18 +90,38 @@ public class BranchManager {
     private BranchManager(Engine engine) {
         this.engine = engine;
         //put the root
-        get(engine.getState(0l));
+        put(engine.getState(0l));
     }
     
-    public PolybufIO<MetaState> getIO(Engine engine) {
-        return new IO();
+    //branch sync
+    
+    /**
+     * <p>
+     * Receives an update offer from a remote branch manager. The branch to be updated consists of the branch
+     * owner's ID in hex (16 digits), a slash and a branch name. The {@code state} contains the full information
+     * about the branch's tip as the remote BranchManager knows it, and the {@code ancestors} array contains state
+     * IDs that the remote BranchManager thought this BranchManager already knew, as to allow to communicate deltas
+     * as small as possible. In the case that this BranchManager was already up to date, or had the parent of the
+     * new state, and could therefore update immediately, the return value will be the new state's id. Otherwise,
+     * it will be the latest state's id of which the manager knows it's on the branch; likely either an element of
+     * the {@code ancestors} array, or {@code 0}.
+     * </p>
+     * 
+     * @param engine the id of the offering BranchManager's engine
+     * @param branch the branch this update belongs to
+     * @param state the state being the tip of this update
+     * @param ancestors a list of ancestor state IDs the remote branch manager thought this branch manager might
+     *            already be aware of
+     * @return the most recent state id that this BranchManager knows for the given branch; {@code 0} if the branch
+     *         is unknown; the {@code state}'s id if the full branch is known
+     */
+    public long receiveUpdate(int engine, String branch, Obj state, long... ancestors) {
+        return 0;
     }
     
-    public void configure(PolybufConfig config, Engine engine) {
-        config.put(State.FIELD, getIO(engine));
-    }
+    //state mgmt
     
-    private MetaState get(State state) {
+    private MetaState put(State state) {
         Long id = state.getId();
         MetaState result = states.get(id);
         if(result == null) {
@@ -134,7 +156,7 @@ public class BranchManager {
             if(stateId != 0) {
                 State parentState = state.getParent();
                 parentId = parentState.getId();
-                parent = get(parentState);
+                parent = put(parentState);
             } else {
                 parentId = 0;
             }
@@ -178,6 +200,16 @@ public class BranchManager {
             
             return true;
         }
+    }
+    
+    //polybuf
+    
+    public PolybufIO<MetaState> getIO(Engine engine) {
+        return new IO();
+    }
+    
+    public void configure(PolybufConfig config, Engine engine) {
+        config.put(State.FIELD, getIO(engine));
     }
     
     private class IO implements PolybufIO<MetaState> {

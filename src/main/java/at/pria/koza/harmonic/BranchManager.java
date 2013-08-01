@@ -93,7 +93,7 @@ public class BranchManager {
         put(engine.getState(0l));
     }
     
-    //branch sync
+    //receive branch sync
     
     /**
      * <p>
@@ -111,12 +111,28 @@ public class BranchManager {
      * @param branch the branch this update belongs to
      * @param state the state being the tip of this update
      * @param ancestors a list of ancestor state IDs the remote branch manager thought this branch manager might
-     *            already be aware of
+     *            already be aware of; most recent first
      * @return the most recent state id that this BranchManager knows for the given branch; {@code 0} if the branch
      *         is unknown; the {@code state}'s id if the full branch is known
      */
     public long receiveUpdate(int engine, String branch, Obj state, long... ancestors) {
-        return 0;
+        MetaState newHead = deserialize(state);
+        put(newHead);
+        if(newHead.resolve()) {
+            //we have all we need
+            MetaState[] head = branches.get(branch);
+            if(head == null) branches.put(branch, head = new MetaState[1]);
+            head[0] = newHead;
+            return newHead.stateId;
+            
+        } else {
+            //we need additional states
+            for(long l:ancestors)
+                if(states.containsKey(l)) return l;
+            
+            //we know none of the given ancestors
+            return 0;
+        }
     }
     
     /**
@@ -132,11 +148,37 @@ public class BranchManager {
      * @param engine the id of the offering BranchManager's engine
      * @param branch the branch this update belongs to
      * @param state the id of the state being the tip of this update
-     * @param ancestors a list of ancestor states that is missing from the local branch
+     * @param ancestors a list of ancestor states that is missing from the local branch, in chronological order
      */
-    public void receiveMissing(int engine, String branch, long state, Obj... ancestors) {}
+    public void receiveMissing(int engine, String branch, long state, Obj... ancestors) {
+        for(Obj obj:ancestors) {
+            MetaState s = deserialize(obj);
+            put(s);
+            if(!s.resolve()) throw new AssertionError();
+        }
+        
+        MetaState newHead = states.get(state);
+        if(!newHead.resolve()) throw new AssertionError();
+        
+        MetaState[] head = branches.get(branch);
+        head[0] = newHead;
+    }
     
     //state mgmt
+    
+    private MetaState deserialize(Obj state) {
+        //TODO
+        return null;
+    }
+    
+    private Obj serialize(MetaState state) {
+        //TODO
+        return null;
+    }
+    
+    private void put(MetaState state) {
+        states.put(state.stateId, state);
+    }
     
     private MetaState put(State state) {
         Long id = state.getId();

@@ -19,6 +19,7 @@ import at.pria.koza.polybuf.PolybufException;
 import at.pria.koza.polybuf.PolybufIO;
 import at.pria.koza.polybuf.PolybufInput;
 import at.pria.koza.polybuf.PolybufOutput;
+import at.pria.koza.polybuf.PolybufSerializable;
 import at.pria.koza.polybuf.proto.Polybuf.Obj;
 
 
@@ -43,6 +44,7 @@ public class BranchManager {
     private final Engine                   engine;
     private final Map<String, MetaState[]> branches = new HashMap<>();
     private final Map<Long, MetaState>     states   = new HashMap<>();
+    private final PolybufConfig            config   = new PolybufConfig();
     
     //ctors
     
@@ -92,6 +94,8 @@ public class BranchManager {
         this.engine = engine;
         //put the root
         put(engine.getState(0l));
+        
+        configure(config);
     }
     
     //receive branch sync
@@ -247,13 +251,21 @@ public class BranchManager {
     //state mgmt
     
     private MetaState deserialize(Obj state) {
-        //TODO
-        return null;
+        try {
+            PolybufInput in = new PolybufInput(config);
+            return (MetaState) in.readObject(state);
+        } catch(PolybufException | ClassCastException ex) {
+            throw new IllegalArgumentException(ex);
+        }
     }
     
     private Obj serialize(MetaState state) {
-        //TODO
-        return null;
+        try {
+            PolybufOutput out = new PolybufOutput(config);
+            return out.writeObject(state);
+        } catch(PolybufException ex) {
+            throw new IllegalArgumentException(ex);
+        }
     }
     
     private void put(MetaState state) {
@@ -269,7 +281,7 @@ public class BranchManager {
         return result;
     }
     
-    private class MetaState {
+    private class MetaState implements PolybufSerializable {
         private final long         stateId, parentId;
         
         private Action             action;
@@ -316,6 +328,11 @@ public class BranchManager {
             this.action = action;
         }
         
+        @Override
+        public int getTypeId() {
+            return State.FIELD;
+        }
+        
         /**
          * <p>
          * Resolves this state. Returns true when the MetaState is now fully initialized, false if it is still not.
@@ -347,12 +364,25 @@ public class BranchManager {
     
     //polybuf
     
-    public PolybufIO<MetaState> getIO(Engine engine) {
+    /**
+     * <p>
+     * Returns the {@link PolybufConfig} used by this BranchManager to serialize and deserialize states (and thus
+     * also actions). A custom {@link PolybufIO IO} for {@linkplain State states} is already registered, and must
+     * not be overwritten!
+     * </p>
+     * 
+     * @return the {@link PolybufConfig} used by this BranchManager
+     */
+    public PolybufConfig getConfig() {
+        return config;
+    }
+    
+    private PolybufIO<MetaState> getIO() {
         return new IO();
     }
     
-    public void configure(PolybufConfig config, Engine engine) {
-        config.put(State.FIELD, getIO(engine));
+    private void configure(PolybufConfig config) {
+        config.put(State.FIELD, getIO());
     }
     
     private class IO implements PolybufIO<MetaState> {

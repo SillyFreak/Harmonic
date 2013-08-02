@@ -41,10 +41,12 @@ import at.pria.koza.polybuf.proto.Polybuf.Obj;
  * @author SillyFreak
  */
 public class BranchManager {
+    public static final String             BRANCH_DEFAULT = "default";
+    
     private final Engine                   engine;
-    private final Map<String, MetaState[]> branches = new HashMap<>();
-    private final Map<Long, MetaState>     states   = new HashMap<>();
-    private final PolybufConfig            config   = new PolybufConfig();
+    private final Map<String, MetaState[]> branches       = new HashMap<>();
+    private final Map<Long, MetaState>     states         = new HashMap<>();
+    private final PolybufConfig            config         = new PolybufConfig();
     private String                         currentBranch;
     
     //ctors & misc
@@ -96,7 +98,7 @@ public class BranchManager {
         configure(config);
         
         //put the root
-        currentBranch = "default";
+        currentBranch = BRANCH_DEFAULT;
         createBranch(currentBranch, engine.getState(0l));
     }
     

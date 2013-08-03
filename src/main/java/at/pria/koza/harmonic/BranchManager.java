@@ -417,7 +417,7 @@ public class BranchManager {
             if(parent == null) parent = states.get(parentId);
             if(parent == null || !parent.resolve()) return false;
             
-            state = new State(parent.state, action);
+            state = new State(engine, parent.state, stateId, action);
             addEngine(engine.getId());
             addEngine(state.getEngineId());
             

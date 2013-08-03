@@ -79,7 +79,7 @@ public class State implements PolybufSerializable {
      * @param id the ID assigned to this state by the engine that originally created it
      * @param action the action leading to this state
      */
-    private State(Engine engine, State parent, long id, Action action) {
+    State(Engine engine, State parent, long id, Action action) {
         this.engine = engine;
         this.id = id;
         this.parent = parent;

@@ -134,6 +134,15 @@
    <artifactId>aspectjrt</artifactId>
    <version>${aspectjVer}</version>
   </dependency>
+  <!--
+    Maven must run with Java 1.6 to read the (optional) 1.6 dependency
+    -->
+  <dependency>
+   <groupId>org.jgroups</groupId>
+   <artifactId>jgroups</artifactId>
+   <version>3.2.7.Final</version>
+   <optional>true</optional>
+  </dependency>
 
   <dependency>
    <groupId>at.pria.koza</groupId>

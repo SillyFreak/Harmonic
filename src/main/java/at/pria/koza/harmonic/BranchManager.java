@@ -351,7 +351,7 @@ public class BranchManager {
     private class MetaState implements PolybufSerializable {
         private final long         stateId, parentId;
         
-        private Action             action;
+        private Obj                action;
         
         private MetaState          parent;
         private State              state;
@@ -389,10 +389,11 @@ public class BranchManager {
          * @param state the protobuf serialized form of the state to be added
          * @param action the action extracted from that protobuf extension
          */
-        public MetaState(StateP state, Action action) {
-            stateId = state.getId();
-            parentId = state.getParent();
-            this.action = action;
+        public MetaState(Obj state) {
+            StateP p = state.getExtension(State.EXTENSION);
+            stateId = p.getId();
+            parentId = p.getParent();
+            this.action = p.getAction();
         }
         
         @Override
@@ -453,9 +454,7 @@ public class BranchManager {
         
         @Override
         public MetaState initialize(PolybufInput in, Obj obj) throws PolybufException {
-            StateP p = obj.getExtension(State.EXTENSION);
-            Action action = (Action) in.readObject(p.getAction());
-            return new MetaState(p, action);
+            return new MetaState(obj);
         }
         
         @Override

@@ -19,8 +19,12 @@ import org.jgroups.ReceiverAdapter;
 
 import at.pria.koza.harmonic.BranchManager;
 import at.pria.koza.harmonic.BranchManager.SyncCallback;
+import at.pria.koza.harmonic.State;
 import at.pria.koza.harmonic.proto.HarmonicP.SyncP;
 import at.pria.koza.polybuf.proto.Polybuf.Obj;
+
+import com.google.protobuf.ExtensionRegistry;
+import com.google.protobuf.GeneratedMessage.GeneratedExtension;
 
 
 /**
@@ -32,12 +36,19 @@ import at.pria.koza.polybuf.proto.Polybuf.Obj;
  * @author SillyFreak
  */
 public class JGroupsBranchAdapter extends ReceiverAdapter {
-    private final JChannel      ch;
-    private final BranchManager mgr;
+    private final JChannel          ch;
+    private final BranchManager     mgr;
+    private final ExtensionRegistry reg;
     
     public JGroupsBranchAdapter(JChannel ch, BranchManager mgr) {
         this.ch = ch;
         this.mgr = mgr;
+        reg = ExtensionRegistry.newInstance();
+        reg.add(State.EXTENSION);
+    }
+    
+    public void register(GeneratedExtension<?, ?> ext) {
+        reg.add(ext);
     }
     
     @Override
@@ -46,7 +57,7 @@ public class JGroupsBranchAdapter extends ReceiverAdapter {
             Address src = msg.getSrc();
             ByteArrayInputStream bais = new ByteArrayInputStream(msg.getRawBuffer(), msg.getOffset(),
                     msg.getLength());
-            SyncP m = SyncP.parseFrom(bais);
+            SyncP m = SyncP.parseFrom(bais, reg);
             
             switch(m.getType()) {
                 case RECEIVE_UPDATE: {

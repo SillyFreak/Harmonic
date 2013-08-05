@@ -15,6 +15,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
 
+import at.pria.koza.polybuf.PolybufConfig;
+
 
 /**
  * <p>
@@ -40,14 +42,15 @@ public class Engine {
             if((result = r.nextInt()) != 0) return result;
     }
     
-    private int                  id;
-    private long                 nextStateId;
+    private int                        id;
+    private final Map<Integer, Entity> entities     = new HashMap<>();
+    private final Map<Long, State>     states       = new HashMap<>();
+    private final PolybufConfig        config       = new PolybufConfig();
     
-    private int                  nextEntityId = 0;
-    private Map<Integer, Entity> entities     = new HashMap<>();
+    private long                       nextStateId;
+    private int                        nextEntityId = 0;
     
-    private State                head;
-    private Map<Long, State>     states       = new HashMap<>();
+    private State                      head;
     
     /**
      * <p>
@@ -80,6 +83,10 @@ public class Engine {
         this.id = id;
         nextStateId = (id & 0xFFFFFFFFl) << 32;
         head = new State(this);
+    }
+    
+    public PolybufConfig getConfig() {
+        return config;
     }
     
     /**

@@ -46,7 +46,6 @@ public class BranchManager {
     private final Engine                   engine;
     private final Map<String, MetaState[]> branches       = new HashMap<>();
     private final Map<Long, MetaState>     states         = new HashMap<>();
-    private final PolybufConfig            config         = new PolybufConfig();
     private String                         currentBranch;
     
     //ctors & misc
@@ -95,7 +94,6 @@ public class BranchManager {
      */
     private BranchManager(Engine engine) {
         this.engine = engine;
-        configure(config);
         
         //put the root
         currentBranch = BRANCH_DEFAULT;
@@ -111,19 +109,6 @@ public class BranchManager {
      */
     public Engine getEngine() {
         return engine;
-    }
-    
-    /**
-     * <p>
-     * Returns the {@link PolybufConfig} used by this BranchManager to serialize and deserialize states (and thus
-     * also actions). A custom {@link PolybufIO IO} for {@linkplain State states} is already registered, and must
-     * not be overwritten!
-     * </p>
-     * 
-     * @return the {@link PolybufConfig} used by this BranchManager
-     */
-    public PolybufConfig getConfig() {
-        return config;
     }
     
     //branch mgmt
@@ -319,7 +304,7 @@ public class BranchManager {
     
     private MetaState deserialize(Obj state) {
         try {
-            PolybufInput in = new PolybufInput(config);
+            PolybufInput in = new PolybufInput(engine.getConfig());
             return (MetaState) in.readObject(state);
         } catch(PolybufException | ClassCastException ex) {
             throw new IllegalArgumentException(ex);
@@ -328,7 +313,7 @@ public class BranchManager {
     
     private Obj serialize(MetaState state) {
         try {
-            PolybufOutput out = new PolybufOutput(config);
+            PolybufOutput out = new PolybufOutput(engine.getConfig());
             return out.writeObject(state);
         } catch(PolybufException ex) {
             throw new IllegalArgumentException(ex);
@@ -432,11 +417,11 @@ public class BranchManager {
     
     //polybuf
     
-    private PolybufIO<MetaState> getIO() {
+    public PolybufIO<MetaState> getIO() {
         return new IO();
     }
     
-    private void configure(PolybufConfig config) {
+    public void configure(PolybufConfig config) {
         config.put(State.FIELD, getIO());
     }
     

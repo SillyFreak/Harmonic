@@ -43,7 +43,7 @@ public class State implements PolybufSerializable {
     private final Engine engine;
     private final long   id;
     private final State  parent;
-    private final Action action;
+    private final Obj    action;
     
     /**
      * <p>
@@ -65,7 +65,17 @@ public class State implements PolybufSerializable {
      * @param action the action leading to this new state
      */
     public State(State parent, Action action) {
-        this(parent.getEngine(), parent, parent.getEngine().nextStateId(), action);
+        this(parent.getEngine(), parent, parent.getEngine().nextStateId(), serialize(
+                parent.getEngine().getConfig(), action));
+    }
+    
+    //helper method to call from constructor
+    private static Obj serialize(PolybufConfig config, Action action) {
+        try {
+            return new PolybufOutput(config).writeObject(action);
+        } catch(PolybufException ex) {
+            throw new IllegalArgumentException(ex);
+        }
     }
     
     /**
@@ -79,7 +89,7 @@ public class State implements PolybufSerializable {
      * @param id the ID assigned to this state by the engine that originally created it
      * @param action the action leading to this state
      */
-    State(Engine engine, State parent, long id, Action action) {
+    State(Engine engine, State parent, long id, Obj action) {
         this.engine = engine;
         this.id = id;
         this.parent = parent;
@@ -142,7 +152,11 @@ public class State implements PolybufSerializable {
      * @return the action that led from the parent to this state
      */
     public Action getAction() {
-        return action;
+        try {
+            return (Action) new PolybufInput(engine.getConfig()).readObject(action);
+        } catch(PolybufException ex) {
+            throw new AssertionError(ex);
+        }
     }
     
     @Override
@@ -230,7 +244,7 @@ public class State implements PolybufSerializable {
             StateP.Builder b = StateP.newBuilder();
             b.setId(object.id);
             b.setParent(object.parent.id);
-            b.setAction(out.writeObject(object.action));
+            b.setAction(object.action);
             
             obj.setExtension(EXTENSION, b.build());
         }
@@ -240,10 +254,8 @@ public class State implements PolybufSerializable {
             StateP p = obj.getExtension(EXTENSION);
             long id = p.getId();
             State parent = engine.getState(p.getParent());
-            //the action won't have a reference to this state, so this line is safe
-            Action action = (Action) in.readObject(p.getAction());
             
-            return new State(engine, parent, id, action);
+            return new State(engine, parent, id, p.getAction());
         }
         
         @Override

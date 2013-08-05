@@ -65,7 +65,17 @@ public class State implements PolybufSerializable {
      * @param action the action leading to this new state
      */
     public State(State parent, Action action) {
-        this(parent.getEngine(), parent, parent.getEngine().nextStateId(), new PolybufOutput(config).writeObject(action));
+        this(parent.getEngine(), parent, parent.getEngine().nextStateId(), serialize(
+                parent.getEngine().getConfig(), action));
+    }
+    
+    //helper method to call from constructor
+    private static Obj serialize(PolybufConfig config, Action action) {
+        try {
+            return new PolybufOutput(config).writeObject(action);
+        } catch(PolybufException ex) {
+            throw new IllegalArgumentException(ex);
+        }
     }
     
     /**
@@ -142,7 +152,11 @@ public class State implements PolybufSerializable {
      * @return the action that led from the parent to this state
      */
     public Action getAction() {
-        return (Action) new PolybufInput(config).readObject(action);
+        try {
+            return (Action) new PolybufInput(engine.getConfig()).readObject(action);
+        } catch(PolybufException ex) {
+            throw new AssertionError(ex);
+        }
     }
     
     @Override

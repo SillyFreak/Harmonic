@@ -169,7 +169,7 @@ public class BranchManager {
      * @return the most recent state id that this BranchManager knows for the given branch; {@code 0} if the branch
      *         is unknown; the {@code state}'s id if the full branch is known
      */
-    public long receiveUpdate(int engine, String branch, Obj state, long... ancestors) {
+    public void receiveUpdate(int engine, String branch, Obj state, long[] ancestors, SyncCallback callback) {
         MetaState newHead = deserialize(state);
         put(newHead);
         if(newHead.resolve()) {
@@ -181,15 +181,16 @@ public class BranchManager {
             head[0] = newHead;
             if(currentBranch.equals(branch)) this.engine.setHead(head[0].state);
             
-            return newHead.stateId;
-            
         } else {
             //we need additional states
             for(long l:ancestors)
-                if(states.containsKey(l)) return l;
+                if(states.containsKey(l)) {
+                    callback.receiveUpdateCallback(this.engine.getId(), branch, l);
+                    return;
+                }
             
             //we know none of the given ancestors
-            return 0;
+            callback.receiveUpdateCallback(this.engine.getId(), branch, 0l);
         }
     }
     
@@ -208,7 +209,7 @@ public class BranchManager {
      * @param state the id of the state being the tip of this update
      * @param ancestors a list of ancestor states that is missing from the local branch, in chronological order
      */
-    public void receiveMissing(int engine, String branch, long state, Obj... ancestors) {
+    public void receiveMissing(int engine, String branch, long state, Obj[] ancestors) {
         for(Obj obj:ancestors) {
             MetaState s = deserialize(obj);
             put(s);
@@ -290,6 +291,14 @@ public class BranchManager {
          * </p>
          */
         public void sendUpdateCallback(int engine, String branch, Obj state, long... ancestors);
+        
+        /**
+         * <p>
+         * Reports the data needed to call {@link BranchManager#sendMissing(int, String, long, SyncCallback)
+         * sendMissing()} on the sending BranchManager.
+         * </p>
+         */
+        public void receiveUpdateCallback(int engine, String branch, long ancestor);
         
         /**
          * <p>

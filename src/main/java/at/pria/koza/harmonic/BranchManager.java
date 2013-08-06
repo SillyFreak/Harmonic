@@ -22,6 +22,8 @@ import at.pria.koza.polybuf.PolybufOutput;
 import at.pria.koza.polybuf.PolybufSerializable;
 import at.pria.koza.polybuf.proto.Polybuf.Obj;
 
+import com.google.protobuf.GeneratedMessage.GeneratedExtension;
+
 
 /**
  * <p>
@@ -431,7 +433,7 @@ public class BranchManager {
     }
     
     public void configure(PolybufConfig config) {
-        config.put(State.FIELD, getIO());
+        config.add(getIO());
     }
     
     private class IO implements PolybufIO<MetaState> {
@@ -439,6 +441,16 @@ public class BranchManager {
         
         public IO() {
             delegate = State.getIO(engine);
+        }
+        
+        @Override
+        public int getType() {
+            return delegate.getType();
+        }
+        
+        @Override
+        public GeneratedExtension<Obj, ?> getExtension() {
+            return delegate.getExtension();
         }
         
         @Override

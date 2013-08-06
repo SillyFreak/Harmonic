@@ -37,7 +37,7 @@ public class State implements PolybufSerializable {
     }
     
     public static void configure(PolybufConfig config, Engine engine) {
-        config.put(FIELD, getIO(engine));
+        config.add(getIO(engine));
     }
     
     private final Engine engine;
@@ -244,7 +244,8 @@ public class State implements PolybufSerializable {
     
     @Override
     public String toString() {
-        return format("%s@%016X: %s", getClass().getSimpleName(), id, actionObj);
+        String actionType = actionObj == null? null:engine.getConfig().get(actionObj.getTypeId()).getExtension().getDescriptor().getMessageType().getName();
+        return format("%s@%016X: %s", getClass().getSimpleName(), id, actionType);
     }
     
     private static class IO implements PolybufIO<State> {
@@ -252,6 +253,16 @@ public class State implements PolybufSerializable {
         
         public IO(Engine engine) {
             this.engine = engine;
+        }
+        
+        @Override
+        public int getType() {
+            return FIELD;
+        }
+        
+        @Override
+        public GeneratedExtension<Obj, StateP> getExtension() {
+            return EXTENSION;
         }
         
         @Override

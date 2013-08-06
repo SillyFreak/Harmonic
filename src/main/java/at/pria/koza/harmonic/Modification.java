@@ -75,5 +75,5 @@ public abstract class Modification {
      * in the same state as it was after {@linkplain #apply() applying} this modification.
      * </p>
      */
-    public abstract void revert();
+    protected abstract void revert();
 }

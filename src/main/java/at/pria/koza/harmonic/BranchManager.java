@@ -22,6 +22,8 @@ import at.pria.koza.polybuf.PolybufOutput;
 import at.pria.koza.polybuf.PolybufSerializable;
 import at.pria.koza.polybuf.proto.Polybuf.Obj;
 
+import com.google.protobuf.GeneratedMessage.GeneratedExtension;
+
 
 /**
  * <p>
@@ -46,7 +48,6 @@ public class BranchManager {
     private final Engine                   engine;
     private final Map<String, MetaState[]> branches       = new HashMap<>();
     private final Map<Long, MetaState>     states         = new HashMap<>();
-    private final PolybufConfig            config         = new PolybufConfig();
     private String                         currentBranch;
     
     //ctors & misc
@@ -95,7 +96,6 @@ public class BranchManager {
      */
     private BranchManager(Engine engine) {
         this.engine = engine;
-        configure(config);
         
         //put the root
         currentBranch = BRANCH_DEFAULT;
@@ -111,19 +111,6 @@ public class BranchManager {
      */
     public Engine getEngine() {
         return engine;
-    }
-    
-    /**
-     * <p>
-     * Returns the {@link PolybufConfig} used by this BranchManager to serialize and deserialize states (and thus
-     * also actions). A custom {@link PolybufIO IO} for {@linkplain State states} is already registered, and must
-     * not be overwritten!
-     * </p>
-     * 
-     * @return the {@link PolybufConfig} used by this BranchManager
-     */
-    public PolybufConfig getConfig() {
-        return config;
     }
     
     //branch mgmt
@@ -184,7 +171,7 @@ public class BranchManager {
      * @return the most recent state id that this BranchManager knows for the given branch; {@code 0} if the branch
      *         is unknown; the {@code state}'s id if the full branch is known
      */
-    public long receiveUpdate(int engine, String branch, Obj state, long... ancestors) {
+    public void receiveUpdate(int engine, String branch, Obj state, long[] ancestors, SyncCallback callback) {
         MetaState newHead = deserialize(state);
         put(newHead);
         if(newHead.resolve()) {
@@ -196,15 +183,16 @@ public class BranchManager {
             head[0] = newHead;
             if(currentBranch.equals(branch)) this.engine.setHead(head[0].state);
             
-            return newHead.stateId;
-            
         } else {
             //we need additional states
             for(long l:ancestors)
-                if(states.containsKey(l)) return l;
+                if(states.containsKey(l)) {
+                    callback.receiveUpdateCallback(this.engine.getId(), branch, l);
+                    return;
+                }
             
             //we know none of the given ancestors
-            return 0;
+            callback.receiveUpdateCallback(this.engine.getId(), branch, 0l);
         }
     }
     
@@ -223,7 +211,7 @@ public class BranchManager {
      * @param state the id of the state being the tip of this update
      * @param ancestors a list of ancestor states that is missing from the local branch, in chronological order
      */
-    public void receiveMissing(int engine, String branch, long state, Obj... ancestors) {
+    public void receiveMissing(int engine, String branch, long state, Obj[] ancestors) {
         for(Obj obj:ancestors) {
             MetaState s = deserialize(obj);
             put(s);
@@ -308,6 +296,14 @@ public class BranchManager {
         
         /**
          * <p>
+         * Reports the data needed to call {@link BranchManager#sendMissing(int, String, long, SyncCallback)
+         * sendMissing()} on the sending BranchManager.
+         * </p>
+         */
+        public void receiveUpdateCallback(int engine, String branch, long ancestor);
+        
+        /**
+         * <p>
          * Reports the data needed to call {@link BranchManager#receiveMissing(int, String, long, Obj...)
          * receiveMissing()} on the receiving BranchManager.
          * </p>
@@ -319,7 +315,7 @@ public class BranchManager {
     
     private MetaState deserialize(Obj state) {
         try {
-            PolybufInput in = new PolybufInput(config);
+            PolybufInput in = new PolybufInput(engine.getConfig());
             return (MetaState) in.readObject(state);
         } catch(PolybufException | ClassCastException ex) {
             throw new IllegalArgumentException(ex);
@@ -328,7 +324,7 @@ public class BranchManager {
     
     private Obj serialize(MetaState state) {
         try {
-            PolybufOutput out = new PolybufOutput(config);
+            PolybufOutput out = new PolybufOutput(engine.getConfig());
             return out.writeObject(state);
         } catch(PolybufException ex) {
             throw new IllegalArgumentException(ex);
@@ -351,7 +347,7 @@ public class BranchManager {
     private class MetaState implements PolybufSerializable {
         private final long         stateId, parentId;
         
-        private Action             action;
+        private Obj                action;
         
         private MetaState          parent;
         private State              state;
@@ -389,10 +385,11 @@ public class BranchManager {
          * @param state the protobuf serialized form of the state to be added
          * @param action the action extracted from that protobuf extension
          */
-        public MetaState(StateP state, Action action) {
-            stateId = state.getId();
-            parentId = state.getParent();
-            this.action = action;
+        public MetaState(Obj state) {
+            StateP p = state.getExtension(State.EXTENSION);
+            stateId = p.getId();
+            parentId = p.getParent();
+            this.action = p.getAction();
         }
         
         @Override
@@ -431,12 +428,12 @@ public class BranchManager {
     
     //polybuf
     
-    private PolybufIO<MetaState> getIO() {
+    public PolybufIO<MetaState> getIO() {
         return new IO();
     }
     
-    private void configure(PolybufConfig config) {
-        config.put(State.FIELD, getIO());
+    public void configure(PolybufConfig config) {
+        config.add(getIO());
     }
     
     private class IO implements PolybufIO<MetaState> {
@@ -447,15 +444,23 @@ public class BranchManager {
         }
         
         @Override
+        public int getType() {
+            return delegate.getType();
+        }
+        
+        @Override
+        public GeneratedExtension<Obj, ?> getExtension() {
+            return delegate.getExtension();
+        }
+        
+        @Override
         public void serialize(PolybufOutput out, MetaState object, Obj.Builder obj) throws PolybufException {
             delegate.serialize(out, object.state, obj);
         }
         
         @Override
         public MetaState initialize(PolybufInput in, Obj obj) throws PolybufException {
-            StateP p = obj.getExtension(State.EXTENSION);
-            Action action = (Action) in.readObject(p.getAction());
-            return new MetaState(p, action);
+            return new MetaState(obj);
         }
         
         @Override

@@ -37,13 +37,15 @@ public class State implements PolybufSerializable {
     }
     
     public static void configure(PolybufConfig config, Engine engine) {
-        config.put(FIELD, getIO(engine));
+        config.add(getIO(engine));
     }
     
     private final Engine engine;
     private final long   id;
     private final State  parent;
-    private final Action action;
+    
+    private final Obj    actionObj;
+    private Action       action;
     
     /**
      * <p>
@@ -65,7 +67,17 @@ public class State implements PolybufSerializable {
      * @param action the action leading to this new state
      */
     public State(State parent, Action action) {
-        this(parent.getEngine(), parent, parent.getEngine().nextStateId(), action);
+        this(parent.getEngine(), parent, parent.getEngine().nextStateId(), serialize(
+                parent.getEngine().getConfig(), action));
+    }
+    
+    //helper method to call from constructor
+    private static Obj serialize(PolybufConfig config, Action action) {
+        try {
+            return new PolybufOutput(config).writeObject(action);
+        } catch(PolybufException ex) {
+            throw new IllegalArgumentException(ex);
+        }
     }
     
     /**
@@ -79,11 +91,11 @@ public class State implements PolybufSerializable {
      * @param id the ID assigned to this state by the engine that originally created it
      * @param action the action leading to this state
      */
-    State(Engine engine, State parent, long id, Action action) {
+    State(Engine engine, State parent, long id, Obj action) {
         this.engine = engine;
         this.id = id;
         this.parent = parent;
-        this.action = action;
+        this.actionObj = action;
         engine.putState(this);
     }
     
@@ -134,9 +146,26 @@ public class State implements PolybufSerializable {
         return parent;
     }
     
+    void apply() {
+        assert action == null;
+        try {
+            action = (Action) new PolybufInput(engine.getConfig()).readObject(actionObj);
+        } catch(PolybufException ex) {
+            throw new AssertionError(ex);
+        }
+        action.apply();
+    }
+    
+    void revert() {
+        assert action != null;
+        action.revert();
+        action = null;
+    }
+    
     /**
      * <p>
-     * Returns the action that led from the parent to this state.
+     * Returns the action that led from the parent to this state. This method will return {@code null} if in the
+     * current head state of the engine, the action was not executed.
      * </p>
      * 
      * @return the action that led from the parent to this state
@@ -215,7 +244,8 @@ public class State implements PolybufSerializable {
     
     @Override
     public String toString() {
-        return format("%s@%016X: %s", getClass().getSimpleName(), id, action);
+        String actionType = actionObj == null? null:engine.getConfig().get(actionObj.getTypeId()).getExtension().getDescriptor().getMessageType().getName();
+        return format("%s@%016X: %s", getClass().getSimpleName(), id, actionType);
     }
     
     private static class IO implements PolybufIO<State> {
@@ -226,11 +256,21 @@ public class State implements PolybufSerializable {
         }
         
         @Override
+        public int getType() {
+            return FIELD;
+        }
+        
+        @Override
+        public GeneratedExtension<Obj, StateP> getExtension() {
+            return EXTENSION;
+        }
+        
+        @Override
         public void serialize(PolybufOutput out, State object, Obj.Builder obj) throws PolybufException {
             StateP.Builder b = StateP.newBuilder();
             b.setId(object.id);
             b.setParent(object.parent.id);
-            b.setAction(out.writeObject(object.action));
+            b.setAction(object.actionObj);
             
             obj.setExtension(EXTENSION, b.build());
         }
@@ -240,10 +280,8 @@ public class State implements PolybufSerializable {
             StateP p = obj.getExtension(EXTENSION);
             long id = p.getId();
             State parent = engine.getState(p.getParent());
-            //the action won't have a reference to this state, so this line is safe
-            Action action = (Action) in.readObject(p.getAction());
             
-            return new State(engine, parent, id, action);
+            return new State(engine, parent, id, p.getAction());
         }
         
         @Override

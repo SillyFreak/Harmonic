@@ -147,7 +147,7 @@
   <dependency>
    <groupId>at.pria.koza</groupId>
    <artifactId>polybuf</artifactId>
-   <version>0.0.3</version>
+   <version>0.0.3-SNAPSHOT</version>
   </dependency>
  </dependencies>
 </project>

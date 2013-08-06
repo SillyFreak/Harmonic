@@ -133,14 +133,14 @@ public class Engine {
         
         //roll back to pred
         for(State current = this.head; current != pred; current = current.getParent())
-            current.getAction().revert();
+            current.revert();
         
         //move forward to new head
         Deque<State> states = new LinkedList<>();
         for(State current = head; current != pred; current = current.getParent())
             states.addFirst(current);
         for(State current:states)
-            current.getAction().apply();
+            current.apply();
         
         //set new head
         this.head = head;

@@ -117,7 +117,7 @@ public abstract class Action {
      * in the same state as it was after {@linkplain #apply() applying} this action.
      * </p>
      */
-    public void revert() {
+    void revert() {
         for(ListIterator<Modification> it = modifications.listIterator(modifications.size()); it.hasPrevious();) {
             it.previous().revert();
             it.remove();

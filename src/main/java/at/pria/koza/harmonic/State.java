@@ -43,7 +43,9 @@ public class State implements PolybufSerializable {
     private final Engine engine;
     private final long   id;
     private final State  parent;
-    private final Obj    action;
+    
+    private final Obj    actionObj;
+    private Action       action;
     
     /**
      * <p>
@@ -93,7 +95,7 @@ public class State implements PolybufSerializable {
         this.engine = engine;
         this.id = id;
         this.parent = parent;
-        this.action = action;
+        this.actionObj = action;
         engine.putState(this);
     }
     
@@ -144,19 +146,32 @@ public class State implements PolybufSerializable {
         return parent;
     }
     
+    void apply() {
+        assert action == null;
+        try {
+            action = (Action) new PolybufInput(engine.getConfig()).readObject(actionObj);
+        } catch(PolybufException ex) {
+            throw new AssertionError(ex);
+        }
+        action.apply();
+    }
+    
+    void revert() {
+        assert action != null;
+        action.revert();
+        action = null;
+    }
+    
     /**
      * <p>
-     * Returns the action that led from the parent to this state.
+     * Returns the action that led from the parent to this state. This method will return {@code null} if in the
+     * current head state of the engine, the action was not executed.
      * </p>
      * 
      * @return the action that led from the parent to this state
      */
     public Action getAction() {
-        try {
-            return (Action) new PolybufInput(engine.getConfig()).readObject(action);
-        } catch(PolybufException ex) {
-            throw new AssertionError(ex);
-        }
+        return action;
     }
     
     @Override
@@ -229,7 +244,7 @@ public class State implements PolybufSerializable {
     
     @Override
     public String toString() {
-        return format("%s@%016X: %s", getClass().getSimpleName(), id, action);
+        return format("%s@%016X: %s", getClass().getSimpleName(), id, actionObj);
     }
     
     private static class IO implements PolybufIO<State> {
@@ -244,7 +259,7 @@ public class State implements PolybufSerializable {
             StateP.Builder b = StateP.newBuilder();
             b.setId(object.id);
             b.setParent(object.parent.id);
-            b.setAction(object.action);
+            b.setAction(object.actionObj);
             
             obj.setExtension(EXTENSION, b.build());
         }

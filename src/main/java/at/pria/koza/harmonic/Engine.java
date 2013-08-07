@@ -50,6 +50,7 @@ public class Engine {
     private final Map<Long, State>     states         = new HashMap<>();
     private final PolybufConfig        config         = new PolybufConfig();
     private final List<StateListener>  stateListeners = new ArrayList<>();
+    private final List<HeadListener>   headListeners  = new ArrayList<>();
     
     private long                       nextStateId;
     private int                        nextEntityId   = 0;
@@ -101,10 +102,26 @@ public class Engine {
         stateListeners.remove(l);
     }
     
+    public void addHeadListener(HeadListener l) {
+        headListeners.add(l);
+    }
+    
+    public void removeHeadListener(HeadListener l) {
+        headListeners.remove(l);
+    }
+    
     protected void fireStateAdded(State state) {
         synchronized(stateListeners) {
             for(ListIterator<StateListener> it = stateListeners.listIterator(stateListeners.size()); it.hasPrevious();) {
                 it.previous().stateAdded(state);
+            }
+        }
+    }
+    
+    protected void fireHeadMoved(State prevHead, State newHead) {
+        synchronized(headListeners) {
+            for(ListIterator<HeadListener> it = headListeners.listIterator(headListeners.size()); it.hasPrevious();) {
+                it.previous().headMoved(prevHead, newHead);
             }
         }
     }
@@ -163,7 +180,9 @@ public class Engine {
             current.apply();
         
         //set new head
+        State old = this.head;
         this.head = head;
+        fireHeadMoved(old, head);
     }
     
     /**

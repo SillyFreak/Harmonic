@@ -9,9 +9,12 @@ package at.pria.koza.harmonic;
 
 import static java.lang.String.*;
 
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
 
@@ -43,12 +46,13 @@ public class Engine {
     }
     
     private int                        id;
-    private final Map<Integer, Entity> entities     = new HashMap<>();
-    private final Map<Long, State>     states       = new HashMap<>();
-    private final PolybufConfig        config       = new PolybufConfig();
+    private final Map<Integer, Entity> entities       = new HashMap<>();
+    private final Map<Long, State>     states         = new HashMap<>();
+    private final PolybufConfig        config         = new PolybufConfig();
+    private final List<StateListener>  stateListeners = new ArrayList<>();
     
     private long                       nextStateId;
-    private int                        nextEntityId = 0;
+    private int                        nextEntityId   = 0;
     
     private State                      head;
     
@@ -87,6 +91,22 @@ public class Engine {
     
     public PolybufConfig getConfig() {
         return config;
+    }
+    
+    public void addStateListener(StateListener l) {
+        stateListeners.add(l);
+    }
+    
+    public void removeStateListener(StateListener l) {
+        stateListeners.remove(l);
+    }
+    
+    protected void fireStateAdded(State state) {
+        synchronized(stateListeners) {
+            for(ListIterator<StateListener> it = stateListeners.listIterator(stateListeners.size()); it.hasPrevious();) {
+                it.previous().stateAdded(state);
+            }
+        }
     }
     
     /**
@@ -191,6 +211,7 @@ public class Engine {
         Long id = state.getId();
         if(states.containsKey(id)) throw new IllegalStateException();
         states.put(id, state);
+        fireStateAdded(state);
     }
     
     /**

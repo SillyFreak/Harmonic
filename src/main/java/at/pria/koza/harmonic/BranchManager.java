@@ -7,9 +7,12 @@
 package at.pria.koza.harmonic;
 
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -43,11 +46,12 @@ import com.google.protobuf.GeneratedMessage.GeneratedExtension;
  * @author SillyFreak
  */
 public class BranchManager {
-    public static final String             BRANCH_DEFAULT = "default";
+    public static final String             BRANCH_DEFAULT  = "default";
     
     private final Engine                   engine;
-    private final Map<String, MetaState[]> branches       = new HashMap<>();
-    private final Map<Long, MetaState>     states         = new HashMap<>();
+    private final Map<String, MetaState[]> branches        = new HashMap<>();
+    private final Map<Long, MetaState>     states          = new HashMap<>();
+    private final List<BranchListener>     branchListeners = new ArrayList<>();
     private String                         currentBranch;
     
     //ctors & misc
@@ -113,6 +117,32 @@ public class BranchManager {
         return engine;
     }
     
+    //listeners
+    
+    public void addBranchListener(BranchListener l) {
+        branchListeners.add(l);
+    }
+    
+    public void removeBranchListener(BranchListener l) {
+        branchListeners.remove(l);
+    }
+    
+    protected void fireBranchCreated(BranchManager mgr, String branch, State head) {
+        synchronized(branchListeners) {
+            for(ListIterator<BranchListener> it = branchListeners.listIterator(branchListeners.size()); it.hasPrevious();) {
+                it.previous().branchCreated(mgr, branch, head);
+            }
+        }
+    }
+    
+    protected void fireBranchMoved(BranchManager mgr, String branch, State prevHead, State newHead) {
+        synchronized(branchListeners) {
+            for(ListIterator<BranchListener> it = branchListeners.listIterator(branchListeners.size()); it.hasPrevious();) {
+                it.previous().branchMoved(mgr, branch, prevHead, newHead);
+            }
+        }
+    }
+    
     //branch mgmt
     
     public void createBranchHere(String branch) {
@@ -123,6 +153,7 @@ public class BranchManager {
         if(state.getEngine() != engine) throw new IllegalArgumentException();
         if(branches.containsKey(branch)) throw new IllegalArgumentException();
         branches.put(branch, new MetaState[] {put(state)});
+        fireBranchCreated(this, branch, state);
     }
     
     public State getBranchTip(String branch) {
@@ -180,8 +211,12 @@ public class BranchManager {
             
             MetaState[] head = branches.get(branch);
             if(head == null) branches.put(branch, head = new MetaState[1]);
+            MetaState oldHead = head[0];
             head[0] = newHead;
+            
             if(currentBranch.equals(branch)) this.engine.setHead(head[0].state);
+            if(oldHead == null) fireBranchCreated(this, branch, newHead.state);
+            else fireBranchMoved(this, branch, oldHead.state, newHead.state);
             
         } else {
             //we need additional states
@@ -224,8 +259,13 @@ public class BranchManager {
         newHead.addEngine(engine);
         
         MetaState[] head = branches.get(branch);
+        if(head == null) branches.put(branch, head = new MetaState[1]);
+        MetaState oldHead = head[0];
         head[0] = newHead;
+        
         if(currentBranch.equals(branch)) this.engine.setHead(head[0].state);
+        if(oldHead == null) fireBranchCreated(this, branch, newHead.state);
+        else fireBranchMoved(this, branch, oldHead.state, newHead.state);
     }
     
     //send branch sync

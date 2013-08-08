@@ -285,13 +285,19 @@ public class BranchManager {
         MetaState[] head = branches.get(branch);
         if(head == null || head[0] == null) throw new IllegalArgumentException();
         
-        MetaState state = head[0];
-        Integer id = engine;
-        while(state != null && !state.engines.contains(id))
-            state = state.parent;
-        if(state == head[0]) return;
+        MetaState state;
+        if(engine == 0) {
+            state = null;
+        } else {
+            state = head[0];
+            Integer id = engine;
+            while(state != null && !state.engines.contains(id))
+                state = state.parent;
+            if(state == head[0]) return;
+            
+            head[0].addEngine(engine);
+        }
         
-        head[0].addEngine(engine);
         long[] ancestors = state == null? new long[0]:new long[] {state.stateId};
         callback.sendUpdateCallback(this.engine.getId(), branch, serialize(head[0]), ancestors);
     }

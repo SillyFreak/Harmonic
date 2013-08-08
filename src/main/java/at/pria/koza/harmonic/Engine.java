@@ -8,6 +8,7 @@ package at.pria.koza.harmonic;
 
 
 import static java.lang.String.*;
+import static java.util.Collections.*;
 
 import java.util.ArrayList;
 import java.util.Deque;
@@ -47,7 +48,9 @@ public class Engine {
     
     private int                        id;
     private final Map<Integer, Entity> entities       = new HashMap<>();
+    private final Map<Integer, Entity> entitiesView   = unmodifiableMap(entities);
     private final Map<Long, State>     states         = new HashMap<>();
+    private final Map<Long, State>     statesView     = unmodifiableMap(states);
     private final PolybufConfig        config         = new PolybufConfig();
     private final List<StateListener>  stateListeners = new ArrayList<>();
     private final List<HeadListener>   headListeners  = new ArrayList<>();
@@ -219,6 +222,10 @@ public class Engine {
         return entities.get(id);
     }
     
+    public Map<Integer, Entity> getEntities() {
+        return entitiesView;
+    }
+    
     /**
      * <p>
      * Adds a state to this engine.
@@ -243,6 +250,10 @@ public class Engine {
      */
     public State getState(long id) {
         return states.get(id);
+    }
+    
+    public Map<Long, State> getStates() {
+        return statesView;
     }
     
     @Override

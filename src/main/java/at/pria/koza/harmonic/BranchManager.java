@@ -277,7 +277,6 @@ public class BranchManager {
             MetaState s = deserialize(obj);
             put(s);
             if(!s.resolve()) throw new AssertionError();
-            s.addEngine(engine);
         }
         
         MetaState newHead = states.get(state);
@@ -337,12 +336,12 @@ public class BranchManager {
         MetaState[] head = branches.get(branch);
         if(head == null || head[0] == null) throw new IllegalArgumentException();
         
+        head[0].addEngine(engine);
         long headId = head[0].stateId;
         if(headId == ancestor) return;
         
         LinkedList<Obj> ancestors = new LinkedList<>();
         for(MetaState state = head[0].parent; state.stateId != ancestor; state = state.parent) {
-            state.addEngine(engine);
             ancestors.addFirst(serialize(state));
         }
         
@@ -429,8 +428,6 @@ public class BranchManager {
          */
         public MetaState(State state) {
             this.state = state;
-            addEngine(engine.getId());
-            
             stateId = state.getId();
             if(stateId != 0) {
                 State parentState = state.getParent();
@@ -439,6 +436,8 @@ public class BranchManager {
             } else {
                 parentId = 0;
             }
+            
+            addEngine(engine.getId());
         }
         
         /**
@@ -487,7 +486,12 @@ public class BranchManager {
         }
         
         public void addEngine(int id) {
-            engines.add(id);
+            //an assuption here is that if this state has an engine marked, all its parents will have it marked too
+            //if the state is not resolved, i.e. not attached to its parent, then this assumption could be broken
+            //when it is subsequently resolved, so don't allow that
+            if(!resolve()) throw new IllegalStateException();
+            boolean added = engines.add(id);
+            if(added && parent != null) parent.addEngine(id);
         }
     }
     

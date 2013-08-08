@@ -42,4 +42,15 @@ public interface BranchListener extends EventListener {
      * @param newHead the new tip of the branch
      */
     public void branchMoved(BranchManager mgr, String branch, State prevHead, State newHead);
+    
+    /**
+     * <p>
+     * Called when a branch is deleted.
+     * </p>
+     * 
+     * @param mgr the BranchManager a branch is deleted from
+     * @param branch the branch being deleted
+     * @param prevHead the tip of the new branch previous to deleting it
+     */
+    public void branchDeleted(BranchManager mgr, String branch, State prevHead);
 }

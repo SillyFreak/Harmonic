@@ -143,6 +143,14 @@ public class BranchManager {
         }
     }
     
+    protected void fireBranchDeleted(BranchManager mgr, String branch, State prevHead) {
+        synchronized(branchListeners) {
+            for(ListIterator<BranchListener> it = branchListeners.listIterator(branchListeners.size()); it.hasPrevious();) {
+                it.previous().branchDeleted(mgr, branch, prevHead);
+            }
+        }
+    }
+    
     //branch mgmt
     
     public void createBranchHere(String branch) {
@@ -154,6 +162,13 @@ public class BranchManager {
         if(branches.containsKey(branch)) throw new IllegalArgumentException();
         branches.put(branch, new MetaState[] {put(state)});
         fireBranchCreated(this, branch, state);
+    }
+    
+    public void deleteBranch(String branch) {
+        if(currentBranch.equals(branch)) throw new IllegalArgumentException();
+        MetaState[] head = branches.remove(branch);
+        if(head == null) throw new IllegalArgumentException();
+        fireBranchDeleted(this, branch, head[0].state);
     }
     
     public State getBranchTip(String branch) {

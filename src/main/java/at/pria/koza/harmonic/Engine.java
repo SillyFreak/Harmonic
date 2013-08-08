@@ -8,10 +8,14 @@ package at.pria.koza.harmonic;
 
 
 import static java.lang.String.*;
+import static java.util.Collections.*;
 
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
 
@@ -43,12 +47,16 @@ public class Engine {
     }
     
     private int                        id;
-    private final Map<Integer, Entity> entities     = new HashMap<>();
-    private final Map<Long, State>     states       = new HashMap<>();
-    private final PolybufConfig        config       = new PolybufConfig();
+    private final Map<Integer, Entity> entities       = new HashMap<>();
+    private final Map<Integer, Entity> entitiesView   = unmodifiableMap(entities);
+    private final Map<Long, State>     states         = new HashMap<>();
+    private final Map<Long, State>     statesView     = unmodifiableMap(states);
+    private final PolybufConfig        config         = new PolybufConfig();
+    private final List<StateListener>  stateListeners = new ArrayList<>();
+    private final List<HeadListener>   headListeners  = new ArrayList<>();
     
     private long                       nextStateId;
-    private int                        nextEntityId = 0;
+    private int                        nextEntityId   = 0;
     
     private State                      head;
     
@@ -87,6 +95,38 @@ public class Engine {
     
     public PolybufConfig getConfig() {
         return config;
+    }
+    
+    public void addStateListener(StateListener l) {
+        stateListeners.add(l);
+    }
+    
+    public void removeStateListener(StateListener l) {
+        stateListeners.remove(l);
+    }
+    
+    public void addHeadListener(HeadListener l) {
+        headListeners.add(l);
+    }
+    
+    public void removeHeadListener(HeadListener l) {
+        headListeners.remove(l);
+    }
+    
+    protected void fireStateAdded(State state) {
+        synchronized(stateListeners) {
+            for(ListIterator<StateListener> it = stateListeners.listIterator(stateListeners.size()); it.hasPrevious();) {
+                it.previous().stateAdded(state);
+            }
+        }
+    }
+    
+    protected void fireHeadMoved(State prevHead, State newHead) {
+        synchronized(headListeners) {
+            for(ListIterator<HeadListener> it = headListeners.listIterator(headListeners.size()); it.hasPrevious();) {
+                it.previous().headMoved(prevHead, newHead);
+            }
+        }
     }
     
     /**
@@ -143,7 +183,9 @@ public class Engine {
             current.apply();
         
         //set new head
+        State old = this.head;
         this.head = head;
+        fireHeadMoved(old, head);
     }
     
     /**
@@ -180,6 +222,10 @@ public class Engine {
         return entities.get(id);
     }
     
+    public Map<Integer, Entity> getEntities() {
+        return entitiesView;
+    }
+    
     /**
      * <p>
      * Adds a state to this engine.
@@ -191,6 +237,7 @@ public class Engine {
         Long id = state.getId();
         if(states.containsKey(id)) throw new IllegalStateException();
         states.put(id, state);
+        fireStateAdded(state);
     }
     
     /**
@@ -203,6 +250,10 @@ public class Engine {
      */
     public State getState(long id) {
         return states.get(id);
+    }
+    
+    public Map<Long, State> getStates() {
+        return statesView;
     }
     
     @Override

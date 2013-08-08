@@ -4,7 +4,7 @@
 
  <groupId>at.pria.koza</groupId>
  <artifactId>harmonic</artifactId>
- <version>0.0.6</version>
+ <version>0.0.7</version>
  <name>Harmonic</name>
  <description>
   Harmonic is a library for synchronizing state across multiple instances of a

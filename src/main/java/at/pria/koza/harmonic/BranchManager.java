@@ -7,9 +7,14 @@
 package at.pria.koza.harmonic;
 
 
+import static java.util.Collections.*;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -43,11 +48,13 @@ import com.google.protobuf.GeneratedMessage.GeneratedExtension;
  * @author SillyFreak
  */
 public class BranchManager {
-    public static final String             BRANCH_DEFAULT = "default";
+    public static final String             BRANCH_DEFAULT  = "default";
     
     private final Engine                   engine;
-    private final Map<String, MetaState[]> branches       = new HashMap<>();
-    private final Map<Long, MetaState>     states         = new HashMap<>();
+    private final Map<String, MetaState[]> branches        = new HashMap<>();
+    private final Map<String, MetaState[]> branchesView    = unmodifiableMap(branches);
+    private final Map<Long, MetaState>     states          = new HashMap<>();
+    private final List<BranchListener>     branchListeners = new ArrayList<>();
     private String                         currentBranch;
     
     //ctors & misc
@@ -113,6 +120,40 @@ public class BranchManager {
         return engine;
     }
     
+    //listeners
+    
+    public void addBranchListener(BranchListener l) {
+        branchListeners.add(l);
+    }
+    
+    public void removeBranchListener(BranchListener l) {
+        branchListeners.remove(l);
+    }
+    
+    protected void fireBranchCreated(BranchManager mgr, String branch, State head) {
+        synchronized(branchListeners) {
+            for(ListIterator<BranchListener> it = branchListeners.listIterator(branchListeners.size()); it.hasPrevious();) {
+                it.previous().branchCreated(mgr, branch, head);
+            }
+        }
+    }
+    
+    protected void fireBranchMoved(BranchManager mgr, String branch, State prevHead, State newHead) {
+        synchronized(branchListeners) {
+            for(ListIterator<BranchListener> it = branchListeners.listIterator(branchListeners.size()); it.hasPrevious();) {
+                it.previous().branchMoved(mgr, branch, prevHead, newHead);
+            }
+        }
+    }
+    
+    protected void fireBranchDeleted(BranchManager mgr, String branch, State prevHead) {
+        synchronized(branchListeners) {
+            for(ListIterator<BranchListener> it = branchListeners.listIterator(branchListeners.size()); it.hasPrevious();) {
+                it.previous().branchDeleted(mgr, branch, prevHead);
+            }
+        }
+    }
+    
     //branch mgmt
     
     public void createBranchHere(String branch) {
@@ -122,13 +163,39 @@ public class BranchManager {
     public void createBranch(String branch, State state) {
         if(state.getEngine() != engine) throw new IllegalArgumentException();
         if(branches.containsKey(branch)) throw new IllegalArgumentException();
-        branches.put(branch, new MetaState[] {put(state)});
+        createOrMoveBranch(branch, put(state));
+    }
+    
+    public void deleteBranch(String branch) {
+        if(currentBranch.equals(branch)) throw new IllegalArgumentException();
+        MetaState[] head = branches.remove(branch);
+        if(head == null) throw new IllegalArgumentException();
+        fireBranchDeleted(this, branch, head[0].state);
     }
     
     public State getBranchTip(String branch) {
         MetaState[] tip = branches.get(branch);
         if(tip == null) throw new IllegalArgumentException();
         return tip[0].state;
+    }
+    
+    public State setBranchTip(String branch, State newHead) {
+        if(newHead.getEngine() != engine) throw new IllegalArgumentException();
+        if(!branches.containsKey(branch)) throw new IllegalArgumentException();
+        return createOrMoveBranch(branch, put(newHead)).state;
+    }
+    
+    private MetaState createOrMoveBranch(String branch, MetaState newHead) {
+        MetaState[] tip = branches.get(branch);
+        if(tip == null) branches.put(branch, tip = new MetaState[] {newHead});
+        MetaState oldHead = tip[0];
+        tip[0] = newHead;
+        
+        if(currentBranch.equals(branch)) this.engine.setHead(tip[0].state);
+        if(oldHead == null) fireBranchCreated(this, branch, newHead.state);
+        else fireBranchMoved(this, branch, oldHead.state, newHead.state);
+        
+        return oldHead;
     }
     
     public String getCurrentBranch() {
@@ -147,6 +214,10 @@ public class BranchManager {
         engine.setHead(state);
         tip[0] = put(state);
         return action;
+    }
+    
+    public Set<String> getBranches() {
+        return branchesView.keySet();
     }
     
     //receive branch sync
@@ -178,10 +249,7 @@ public class BranchManager {
             //we have all we need
             newHead.addEngine(engine);
             
-            MetaState[] head = branches.get(branch);
-            if(head == null) branches.put(branch, head = new MetaState[1]);
-            head[0] = newHead;
-            if(currentBranch.equals(branch)) this.engine.setHead(head[0].state);
+            createOrMoveBranch(branch, newHead);
             
         } else {
             //we need additional states
@@ -216,16 +284,13 @@ public class BranchManager {
             MetaState s = deserialize(obj);
             put(s);
             if(!s.resolve()) throw new AssertionError();
-            s.addEngine(engine);
         }
         
         MetaState newHead = states.get(state);
         if(!newHead.resolve()) throw new AssertionError();
         newHead.addEngine(engine);
         
-        MetaState[] head = branches.get(branch);
-        head[0] = newHead;
-        if(currentBranch.equals(branch)) this.engine.setHead(head[0].state);
+        createOrMoveBranch(branch, newHead);
     }
     
     //send branch sync
@@ -245,13 +310,19 @@ public class BranchManager {
         MetaState[] head = branches.get(branch);
         if(head == null || head[0] == null) throw new IllegalArgumentException();
         
-        MetaState state = head[0];
-        Integer id = engine;
-        while(state != null && !state.engines.contains(id))
-            state = state.parent;
-        if(state == head[0]) return;
+        MetaState state;
+        if(engine == 0) {
+            state = null;
+        } else {
+            state = head[0];
+            Integer id = engine;
+            while(state != null && !state.engines.contains(id))
+                state = state.parent;
+            if(state == head[0]) return;
+            
+            head[0].addEngine(engine);
+        }
         
-        head[0].addEngine(engine);
         long[] ancestors = state == null? new long[0]:new long[] {state.stateId};
         callback.sendUpdateCallback(this.engine.getId(), branch, serialize(head[0]), ancestors);
     }
@@ -272,12 +343,12 @@ public class BranchManager {
         MetaState[] head = branches.get(branch);
         if(head == null || head[0] == null) throw new IllegalArgumentException();
         
+        head[0].addEngine(engine);
         long headId = head[0].stateId;
         if(headId == ancestor) return;
         
         LinkedList<Obj> ancestors = new LinkedList<>();
         for(MetaState state = head[0].parent; state.stateId != ancestor; state = state.parent) {
-            state.addEngine(engine);
             ancestors.addFirst(serialize(state));
         }
         
@@ -364,8 +435,6 @@ public class BranchManager {
          */
         public MetaState(State state) {
             this.state = state;
-            addEngine(engine.getId());
-            
             stateId = state.getId();
             if(stateId != 0) {
                 State parentState = state.getParent();
@@ -374,6 +443,8 @@ public class BranchManager {
             } else {
                 parentId = 0;
             }
+            
+            addEngine(engine.getId());
         }
         
         /**
@@ -422,7 +493,12 @@ public class BranchManager {
         }
         
         public void addEngine(int id) {
-            engines.add(id);
+            //an assuption here is that if this state has an engine marked, all its parents will have it marked too
+            //if the state is not resolved, i.e. not attached to its parent, then this assumption could be broken
+            //when it is subsequently resolved, so don't allow that
+            if(!resolve()) throw new IllegalStateException();
+            boolean added = engines.add(id);
+            if(added && parent != null) parent.addEngine(id);
         }
     }
     

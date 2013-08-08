@@ -7,6 +7,8 @@
 package at.pria.koza.harmonic;
 
 
+import static java.util.Collections.*;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,6 +52,7 @@ public class BranchManager {
     
     private final Engine                   engine;
     private final Map<String, MetaState[]> branches        = new HashMap<>();
+    private final Map<String, MetaState[]> branchesView    = unmodifiableMap(branches);
     private final Map<Long, MetaState>     states          = new HashMap<>();
     private final List<BranchListener>     branchListeners = new ArrayList<>();
     private String                         currentBranch;
@@ -211,6 +214,10 @@ public class BranchManager {
         engine.setHead(state);
         tip[0] = put(state);
         return action;
+    }
+    
+    public Set<String> getBranches() {
+        return branchesView.keySet();
     }
     
     //receive branch sync

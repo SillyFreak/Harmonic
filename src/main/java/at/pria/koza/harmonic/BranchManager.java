@@ -160,8 +160,7 @@ public class BranchManager {
     public void createBranch(String branch, State state) {
         if(state.getEngine() != engine) throw new IllegalArgumentException();
         if(branches.containsKey(branch)) throw new IllegalArgumentException();
-        branches.put(branch, new MetaState[] {put(state)});
-        fireBranchCreated(this, branch, state);
+        createOrMoveBranch(branch, put(state));
     }
     
     public void deleteBranch(String branch) {
@@ -175,6 +174,25 @@ public class BranchManager {
         MetaState[] tip = branches.get(branch);
         if(tip == null) throw new IllegalArgumentException();
         return tip[0].state;
+    }
+    
+    public State setBranchTip(String branch, State newHead) {
+        if(newHead.getEngine() != engine) throw new IllegalArgumentException();
+        if(!branches.containsKey(branch)) throw new IllegalArgumentException();
+        return createOrMoveBranch(branch, put(newHead)).state;
+    }
+    
+    private MetaState createOrMoveBranch(String branch, MetaState newHead) {
+        MetaState[] tip = branches.get(branch);
+        if(tip == null) branches.put(branch, tip = new MetaState[] {newHead});
+        MetaState oldHead = tip[0];
+        tip[0] = newHead;
+        
+        if(currentBranch.equals(branch)) this.engine.setHead(tip[0].state);
+        if(oldHead == null) fireBranchCreated(this, branch, newHead.state);
+        else fireBranchMoved(this, branch, oldHead.state, newHead.state);
+        
+        return oldHead;
     }
     
     public String getCurrentBranch() {
@@ -224,14 +242,7 @@ public class BranchManager {
             //we have all we need
             newHead.addEngine(engine);
             
-            MetaState[] head = branches.get(branch);
-            if(head == null) branches.put(branch, head = new MetaState[1]);
-            MetaState oldHead = head[0];
-            head[0] = newHead;
-            
-            if(currentBranch.equals(branch)) this.engine.setHead(head[0].state);
-            if(oldHead == null) fireBranchCreated(this, branch, newHead.state);
-            else fireBranchMoved(this, branch, oldHead.state, newHead.state);
+            createOrMoveBranch(branch, newHead);
             
         } else {
             //we need additional states
@@ -273,14 +284,7 @@ public class BranchManager {
         if(!newHead.resolve()) throw new AssertionError();
         newHead.addEngine(engine);
         
-        MetaState[] head = branches.get(branch);
-        if(head == null) branches.put(branch, head = new MetaState[1]);
-        MetaState oldHead = head[0];
-        head[0] = newHead;
-        
-        if(currentBranch.equals(branch)) this.engine.setHead(head[0].state);
-        if(oldHead == null) fireBranchCreated(this, branch, newHead.state);
-        else fireBranchMoved(this, branch, oldHead.state, newHead.state);
+        createOrMoveBranch(branch, newHead);
     }
     
     //send branch sync

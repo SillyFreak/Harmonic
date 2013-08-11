@@ -269,8 +269,13 @@ public class State implements PolybufSerializable {
         public void serialize(PolybufOutput out, State object, Obj.Builder obj) throws PolybufException {
             StateP.Builder b = StateP.newBuilder();
             b.setId(object.id);
-            b.setParent(object.parent.id);
-            b.setAction(object.actionObj);
+            //handle the root state differently:
+            //it has id zero, i.e. no original engine, no parent and no action
+            //it's inherently different, and must be handled differently
+            if(object.id != 0l) {
+                b.setParent(object.parent.id);
+                b.setAction(object.actionObj);
+            }
             
             obj.setExtension(EXTENSION, b.build());
         }
@@ -279,9 +284,13 @@ public class State implements PolybufSerializable {
         public State initialize(PolybufInput in, Obj obj) throws PolybufException {
             StateP p = obj.getExtension(EXTENSION);
             long id = p.getId();
-            State parent = engine.getState(p.getParent());
-            
-            return new State(engine, parent, id, p.getAction());
+            //handle states already present properly
+            State result = engine.getState(id);
+            if(result == null) {
+                State parent = engine.getState(p.getParent());
+                result = new State(engine, parent, id, p.getAction());
+            }
+            return result;
         }
         
         @Override

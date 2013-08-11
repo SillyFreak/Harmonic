@@ -244,7 +244,6 @@ public class BranchManager {
      */
     public void receiveUpdate(int engine, String branch, Obj state, long[] ancestors, SyncCallback callback) {
         MetaState newHead = deserialize(state);
-        put(newHead);
         if(newHead.resolve()) {
             //we have all we need
             newHead.addEngine(engine);
@@ -282,7 +281,6 @@ public class BranchManager {
     public void receiveMissing(int engine, String branch, long state, Obj[] ancestors) {
         for(Obj obj:ancestors) {
             MetaState s = deserialize(obj);
-            put(s);
             if(!s.resolve()) throw new AssertionError();
         }
         
@@ -400,10 +398,6 @@ public class BranchManager {
         } catch(PolybufException ex) {
             throw new IllegalArgumentException(ex);
         }
-    }
-    
-    private void put(MetaState state) {
-        states.put(state.stateId, state);
     }
     
     private MetaState put(State state) {
@@ -536,7 +530,15 @@ public class BranchManager {
         
         @Override
         public MetaState initialize(PolybufInput in, Obj obj) throws PolybufException {
-            return new MetaState(obj);
+            StateP p = obj.getExtension(State.EXTENSION);
+            long id = p.getId();
+            //handle states already present properly
+            MetaState result = states.get(id);
+            if(result == null) {
+                result = new MetaState(obj);
+                states.put(id, result);
+            }
+            return result;
         }
         
         @Override

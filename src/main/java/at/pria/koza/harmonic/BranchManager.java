@@ -209,10 +209,9 @@ public class BranchManager {
     }
     
     public <T extends Action> T execute(T action) {
-        MetaState[] tip = branches.get(currentBranch);
-        State state = new State(tip[0].state, action);
+        State state = new State(getBranchTip(currentBranch), action);
         engine.setHead(state);
-        tip[0] = put(state);
+        createOrMoveBranch(currentBranch, put(state));
         return action;
     }
     

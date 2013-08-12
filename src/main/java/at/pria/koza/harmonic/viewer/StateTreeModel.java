@@ -41,16 +41,17 @@ public class StateTreeModel extends DefaultTreeModel {
     public StateNode resolve(State state) {
         Long id = state.getId();
         StateNode result = nodes.get(id);
-        if(result == null) {
-            nodes.put(id, result = new StateNode(this, state));
-            System.out.printf("put %016X@%08X%n", id, result.hashCode());
-        }
-        System.out.printf("return %016X@%08X%n", id, result.hashCode());
+        if(result == null) nodes.put(id, result = new StateNode(this, state));
         return result;
     }
     
     @Override
     protected void fireTreeNodesInserted(Object source, Object[] path, int[] childIndices, Object[] children) {
         super.fireTreeNodesInserted(source, path, childIndices, children);
+    }
+    
+    @Override
+    protected void fireTreeNodesChanged(Object source, Object[] path, int[] childIndices, Object[] children) {
+        super.fireTreeNodesChanged(source, path, childIndices, children);
     }
 }

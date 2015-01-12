@@ -1,0 +1,24 @@
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+project.ext.gitTagPrefix = ''
+
+project.afterEvaluate {
+    Pattern p = Pattern.compile("(.*?)(?:-(\\d+)-g([0-9a-f]{7}))?");
+    String tag = 'git describe --tags'.execute().text.trim();
+    Matcher m = p.matcher(tag);
+    if(!m.matches()) {
+        //the pattern should match anything: it starts with .*, and the rest is optional
+        throw new AssertionError(tag);
+    }
+    
+    String version = m.group(1);
+    if(version.startsWith(project.gitTagPrefix)) version = version.substring(project.gitTagPrefix.length());
+    String hash = m.group(3);
+    //if we're not at the tagged revision, this is a snapshot on top of it
+    //TODO do we want the hash?
+//    if(hash != null) version += "-SNAPSHOT-" + hash;
+    if(hash != null) version += "-SNAPSHOT";
+    
+    project.version = version;
+}

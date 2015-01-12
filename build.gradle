@@ -1,0 +1,45 @@
+apply from: project.file('gradle/scala.gradle')
+apply from: project.file('gradle/ide.gradle')
+apply from: project.file('gradle/package.gradle')
+apply from: project.file('gradle/GitVersion.gradle')
+apply from: project.file('gradle/maven.gradle')
+apply plugin: 'protobuf'
+
+sourceCompatibility = '1.7'
+targetCompatibility = '1.7'
+group = 'at.pria.koza'
+
+gitTagPrefix = 'release-'
+
+basePom {
+    project {
+        name project.name
+        description 'Harmonic is a library for synchronizing state across \
+multiple instances of a deterministic software engine. Each instance has full \
+control over what states it wants to send and receive, and what states should \
+be applied to the engine.'
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'org.scala-lang:scala-library:2.11.1'
+    compile 'com.google.protobuf:protobuf-java:2.5.0'
+    testCompile 'junit:junit:4.+'
+}
+//compile 'org.aspectj:aspectjrt:${aspectjVer}' //TODO version
+//compile 'org.jgroups:jgroups:3.2.7.Final' //TODO optional
+//compile 'at.pria.koza:polybuf:0.1.0'
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    
+    dependencies {
+        classpath 'ws.antonov.gradle.plugins:gradle-plugin-protobuf:0.9.1'
+    }
+}

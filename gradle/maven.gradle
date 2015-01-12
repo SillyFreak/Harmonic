@@ -1,0 +1,51 @@
+//adapted from https://github.com/spockframework/spock/blob/spock-0.7-groovy-2.0/gradle/publishMaven.gradle
+apply plugin: 'maven'
+
+def deployers = []
+install {
+    deployers << repositories.mavenInstaller
+}
+
+uploadArchives {
+    repositories {
+        deployers << mavenDeployer {
+            mavenLocal()
+        }
+    }
+}
+
+ext {
+    basePom = { template ->
+        project.afterEvaluate {
+            configure(deployers) {
+                pom template
+            }
+        }
+    }
+    
+    libs = [
+        optional: [],
+        provided: [],
+        internal: [],
+    ]
+    
+    modifyPom = { Closure modification ->
+        deployers*.pom*.whenConfigured(modification)
+    }
+}
+
+modifyPom { pom ->
+    def depString = { dep -> "$dep.groupId:$dep.artifactId:$dep.version" }
+    
+    // no need to publish test dependencies
+    pom.dependencies.removeAll { it.scope == "test" }
+    libs.internal.each { dep ->
+        pom.dependencies.removeAll { depString(it) == dep }
+    }
+    libs.optional.each { dep ->
+        pom.dependencies.find { depString(it) == dep }.optional = true
+    }
+    libs.provided.each { dep ->
+        pom.dependencies.find { depString(it) == dep }.scope = "provided"
+    }
+}

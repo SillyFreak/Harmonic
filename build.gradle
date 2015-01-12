@@ -4,6 +4,8 @@ apply from: project.file('gradle/package.gradle')
 apply from: project.file('gradle/GitVersion.gradle')
 apply from: project.file('gradle/maven.gradle')
 apply plugin: 'protobuf'
+ext.aspectjVersion = '1.8.4'
+apply plugin: 'aspectj'
 
 sourceCompatibility = '1.7'
 targetCompatibility = '1.7'
@@ -23,23 +25,29 @@ be applied to the engine.'
 
 repositories {
     mavenCentral()
+    mavenLocal()
 }
 
 dependencies {
     compile 'org.scala-lang:scala-library:2.11.1'
     compile 'com.google.protobuf:protobuf-java:2.5.0'
+    compile 'at.pria.koza:polybuf:0.2.0'
+    compile 'org.jgroups:jgroups:3.2.7.Final'
     testCompile 'junit:junit:4.+'
 }
-//compile 'org.aspectj:aspectjrt:${aspectjVer}' //TODO version
-//compile 'org.jgroups:jgroups:3.2.7.Final' //TODO optional
-//compile 'at.pria.koza:polybuf:0.1.0'
+
+libs.optional += [
+    'org.jgroups:jgroups:3.2.7.Final',
+]
 
 buildscript {
     repositories {
         mavenCentral()
+        maven { url 'https://maven.eveoh.nl/content/repositories/releases' }
     }
     
     dependencies {
         classpath 'ws.antonov.gradle.plugins:gradle-plugin-protobuf:0.9.1'
+        classpath 'nl.eveoh:gradle-aspectj:1.5'
     }
 }

@@ -27,7 +27,7 @@ abstract class AbstractTreeNode[E <: TreeNode] extends TreeNode {
 
   override def getParent(): TreeNode
 
-  protected def getPath(): Array[Object] = {
+  protected[viewer] def getPath(): Array[Object] = {
     val path = new LinkedList[Object]()
     var node: TreeNode = this
     while (node != null) {

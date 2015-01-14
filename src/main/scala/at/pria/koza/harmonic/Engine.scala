@@ -241,14 +241,14 @@ class Engine(id: Int) {
   override def toString(): String = format("%s@%08X", (getClass().getSimpleName(), id))
 
   private class RegisterEntity(entity: Entity) extends Modification {
-    override def apply0(): Unit = {
+    private[harmonic] override def apply0(): Unit = {
       val id = _nextEntityId
       _nextEntityId += 1
       entity.setEngine(Engine.this, id);
       entities.put(id, entity);
     }
 
-    override def revert(): Unit = {
+    private[harmonic] override def revert(): Unit = {
       entities.remove(entity.getId());
       entity.setEngine(null, -1);
       _nextEntityId -= 1;

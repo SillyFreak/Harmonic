@@ -17,6 +17,7 @@ import java.util.ListIterator
 import java.util.Map
 import java.util.Set
 
+import at.pria.koza.harmonic.BranchManager.SyncCallback
 import at.pria.koza.harmonic.proto.HarmonicP.StateP
 import at.pria.koza.polybuf.PolybufConfig
 import at.pria.koza.polybuf.PolybufException
@@ -47,6 +48,32 @@ import com.google.protobuf.GeneratedMessage.GeneratedExtension
  */
 object BranchManager {
   val BRANCH_DEFAULT = "default"
+
+  trait SyncCallback {
+    /**
+     * <p>
+     * Reports the data needed to call {@link BranchManager#receiveUpdate(int, String, Obj, long...)
+     * receiveUpdate()} on the receiving BranchManager.
+     * </p>
+     */
+    def sendUpdateCallback(engine: Int, branch: String, state: Obj, ancestors: Long*): Unit;
+
+    /**
+     * <p>
+     * Reports the data needed to call {@link BranchManager#sendMissing(int, String, long, SyncCallback)
+     * sendMissing()} on the sending BranchManager.
+     * </p>
+     */
+    def receiveUpdateCallback(engine: Int, branch: String, ancestor: Long): Unit;
+
+    /**
+     * <p>
+     * Reports the data needed to call {@link BranchManager#receiveMissing(int, String, long, Obj...)
+     * receiveMissing()} on the receiving BranchManager.
+     * </p>
+     */
+    def sendMissingCallback(engine: Int, branch: String, state: Long, ancestors: Obj*): Unit;
+  }
 }
 
 /**
@@ -227,7 +254,7 @@ class BranchManager(engine: Engine) {
    * @return the most recent state id that this BranchManager knows for the given branch; {@code 0} if the branch
    *         is unknown; the {@code state}'s id if the full branch is known
    */
-  def receiveUpdate(engine: Int, branch: String, state: Obj, ancestors: Array[Long], callback: SyncCallback): Unit = {
+  def receiveUpdate(engine: Int, branch: String, state: Obj, ancestors: Seq[Long], callback: SyncCallback): Unit = {
     //MetaState newHead = deserialize(state);
     //if(newHead.resolve()) {
     //    //we have all we need
@@ -263,7 +290,7 @@ class BranchManager(engine: Engine) {
    * @param state the id of the state being the tip of this update
    * @param ancestors a list of ancestor states that is missing from the local branch, in chronological order
    */
-  def receiveMissing(engine: Int, branch: String, state: Long, ancestors: Array[Obj]): Unit = {
+  def receiveMissing(engine: Int, branch: String, state: Long, ancestors: Seq[Obj]): Unit = {
     //for(Obj obj:ancestors) {
     //    MetaState s = deserialize(obj);
     //    if(!s.resolve()) throw new AssertionError();
@@ -337,32 +364,6 @@ class BranchManager(engine: Engine) {
     //
     //callback.sendMissingCallback(this.engine.getId(), branch, headId,
     //        ancestors.toArray(new Obj[ancestors.size()]));
-  }
-
-  trait SyncCallback {
-    /**
-     * <p>
-     * Reports the data needed to call {@link BranchManager#receiveUpdate(int, String, Obj, long...)
-     * receiveUpdate()} on the receiving BranchManager.
-     * </p>
-     */
-    def sendUpdateCallback(engine: Int, branch: String, state: Obj, ancestors: Long*): Unit;
-
-    /**
-     * <p>
-     * Reports the data needed to call {@link BranchManager#sendMissing(int, String, long, SyncCallback)
-     * sendMissing()} on the sending BranchManager.
-     * </p>
-     */
-    def receiveUpdateCallback(engine: Int, branch: String, ancestor: Long): Unit;
-
-    /**
-     * <p>
-     * Reports the data needed to call {@link BranchManager#receiveMissing(int, String, long, Obj...)
-     * receiveMissing()} on the receiving BranchManager.
-     * </p>
-     */
-    def sendMissingCallback(engine: Int, branch: String, state: Long, ancestors: Obj*): Unit;
   }
 
   //state mgmt

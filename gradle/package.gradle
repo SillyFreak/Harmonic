@@ -15,7 +15,13 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
     from javadoc.destinationDir
 }
 
+task scaladocJar(type: Jar, dependsOn: scaladoc) {
+    classifier = 'scaladoc'
+    from scaladoc.destinationDir
+}
+
 artifacts {
     archives sourcesJar
     archives javadocJar
+    archives scaladocJar
 }

@@ -154,7 +154,7 @@ class State(engine: Engine, parent: State, id: Long, action: Obj) extends Polybu
 
   def getActionObj(): Polybuf.Obj = _actionObj
 
-  override def getTypeId(): Int = State.FIELD
+  override def typeId: Int = State.FIELD
 
   /**
    * <p>
@@ -229,15 +229,20 @@ class State(engine: Engine, parent: State, id: Long, action: Obj) extends Polybu
   override def toString(): String = {
     val actionType =
       if (_actionObj == null) null
-      else engine.getConfig().get(_actionObj.getTypeId()).getExtension().getDescriptor().getMessageType().getName()
+      else engine.getConfig().get(_actionObj.getTypeId()) match {
+        case Some(io) =>
+          io.extension.getDescriptor().getMessageType().getName()
+        case None =>
+          null
+      }
     format("%s@%016X: %s", (getClass().getSimpleName(), _id, actionType))
   }
 }
 
 private class IO(engine: Engine) extends PolybufIO[State] {
-  override def getType(): Int = State.FIELD
+  override def typeId: Int = State.FIELD
 
-  override def getExtension(): GeneratedExtension[Obj, StateP] = State.EXTENSION
+  override def extension: GeneratedExtension[Obj, StateP] = State.EXTENSION
 
   @throws[PolybufException]
   override def serialize(out: PolybufOutput, instance: State, obj: Obj.Builder): Unit = {

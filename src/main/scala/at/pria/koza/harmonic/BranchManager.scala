@@ -442,7 +442,7 @@ class BranchManager(engine: Engine) {
       _action = state.getExtension(State.EXTENSION).getAction;
     }
 
-    override def getTypeId(): Int = State.FIELD
+    override def typeId: Int = State.FIELD
 
     /**
      * <p>
@@ -488,18 +488,11 @@ class BranchManager(engine: Engine) {
   private class IO extends PolybufIO[MetaState] {
     val delegate: PolybufIO[State] = State.getIO(engine)
 
-    override def getType(): Int = {
-      return delegate.getType();
-    }
-
-    override def getExtension(): GeneratedExtension[Obj, _] = {
-      return delegate.getExtension();
-    }
+    override def extension: GeneratedExtension[Obj, _] = delegate.extension
 
     @throws[PolybufException]
-    override def serialize(out: PolybufOutput, instance: MetaState, obj: Obj.Builder): Unit = {
-      delegate.serialize(out, instance.state, obj);
-    }
+    override def serialize(out: PolybufOutput, instance: MetaState, obj: Obj.Builder): Unit =
+      delegate.serialize(out, instance.state, obj)
 
     @throws[PolybufException]
     override def initialize(in: PolybufInput, obj: Obj): MetaState = {
@@ -515,8 +508,7 @@ class BranchManager(engine: Engine) {
     }
 
     @throws[PolybufException]
-    override def deserialize(in: PolybufInput, obj: Obj, instance: MetaState): Unit = {
+    override def deserialize(in: PolybufInput, obj: Obj, instance: MetaState): Unit =
       delegate.deserialize(in, obj, instance.state)
-    }
   }
 }

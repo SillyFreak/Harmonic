@@ -6,8 +6,7 @@
 
 package at.pria.koza.harmonic.viewer
 
-import java.util.HashMap
-import java.util.Map
+import scala.collection.mutable
 
 import javax.swing.tree.DefaultTreeModel
 
@@ -22,20 +21,13 @@ import at.pria.koza.harmonic.State
  * @author SillyFreak
  */
 class StateTreeModel extends DefaultTreeModel(null) {
-  private val nodes = new HashMap[Long, StateNode]()
+  private val nodes = mutable.Map[Long, StateNode]()
   private val _root = new StateNode()
 
   override def getRoot(): StateNode = _root
 
-  def resolve(state: State): StateNode = {
-    val id = state.id
-    var result = nodes.get(id)
-    if (result == null) {
-      result = new StateNode(this, state)
-      nodes.put(id, result)
-    }
-    result
-  }
+  def resolve(state: State): StateNode =
+    nodes.getOrElseUpdate(state.id, new StateNode(this, state))
 
   override protected[viewer] def fireTreeNodesInserted(source: Object, path: Array[Object], childIndices: Array[Int], children: Array[Object]): Unit =
     super.fireTreeNodesInserted(source, path, childIndices, children)

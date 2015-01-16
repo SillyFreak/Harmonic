@@ -6,8 +6,6 @@
 
 package at.pria.koza.harmonic.jGroups
 
-import at.pria.koza.harmonic.proto.HarmonicP.SyncP.Type._
-
 import java.io.ByteArrayInputStream
 import java.io.IOException
 
@@ -19,6 +17,7 @@ import org.jgroups.ReceiverAdapter
 import at.pria.koza.harmonic.BranchManager
 import at.pria.koza.harmonic.BranchManager.SyncCallback
 import at.pria.koza.harmonic.proto.HarmonicP.SyncP
+import at.pria.koza.harmonic.proto.HarmonicP.SyncP.Type._
 import at.pria.koza.polybuf.proto.Polybuf.Obj
 
 /**
@@ -68,52 +67,48 @@ class JGroupsBranchAdapter(ch: JChannel, mgr: BranchManager) extends ReceiverAda
     }
   }
 
-  def sendUpdate(dst: Address, engine: Int, branch: String): Unit = {
-    mgr.sendUpdate(engine, branch, new Callback(dst));
-  }
+  def sendUpdate(dst: Address, engine: Int, branch: String): Unit =
+    mgr.sendUpdate(engine, branch, new Callback(dst))
 
-  protected def receiveUpdate(src: Address, engine: Int, branch: String, state: Obj, ancestors: Long*): Unit = {
-    mgr.receiveUpdate(engine, branch, state, ancestors, new Callback(src));
-  }
+  protected def receiveUpdate(src: Address, engine: Int, branch: String, state: Obj, ancestors: Long*): Unit =
+    mgr.receiveUpdate(engine, branch, state, ancestors, new Callback(src))
 
-  protected def sendMissing(dst: Address, engine: Int, branch: String, ancestor: Long): Unit = {
-    mgr.sendMissing(engine, branch, ancestor, new Callback(dst));
-  }
+  protected def sendMissing(dst: Address, engine: Int, branch: String, ancestor: Long): Unit =
+    mgr.sendMissing(engine, branch, ancestor, new Callback(dst))
 
-  protected def receiveMissing(src: Address, engine: Int, branch: String, state: Long, ancestors: Obj*): Unit = {
-    mgr.receiveMissing(engine, branch, state, ancestors);
-  }
+  protected def receiveMissing(src: Address, engine: Int, branch: String, state: Long, ancestors: Obj*): Unit =
+    mgr.receiveMissing(engine, branch, state, ancestors)
 
   private class Callback(dst: Address) extends SyncCallback {
     override def sendUpdateCallback(engine: Int, branch: String, state: Obj, ancestors: Long*): Unit = {
-      def b = SyncP.newBuilder();
-      b.setType(RECEIVE_UPDATE);
-      b.setEngine(engine);
-      b.setBranch(branch);
-      b.addStates(state);
+      def b = SyncP.newBuilder()
+      b.setType(RECEIVE_UPDATE)
+      b.setEngine(engine)
+      b.setBranch(branch)
+      b.addStates(state)
       for (ancestor <- ancestors)
-        b.addStateIds(ancestor);
-      send(dst, b.build());
+        b.addStateIds(ancestor)
+      send(dst, b.build())
     }
 
     override def receiveUpdateCallback(engine: Int, branch: String, ancestor: Long): Unit = {
-      def b = SyncP.newBuilder();
-      b.setType(SEND_MISSING);
-      b.setEngine(engine);
-      b.setBranch(branch);
-      b.addStateIds(ancestor);
-      send(dst, b.build());
+      def b = SyncP.newBuilder()
+      b.setType(SEND_MISSING)
+      b.setEngine(engine)
+      b.setBranch(branch)
+      b.addStateIds(ancestor)
+      send(dst, b.build())
     }
 
     override def sendMissingCallback(engine: Int, branch: String, state: Long, ancestors: Obj*): Unit = {
-      def b = SyncP.newBuilder();
-      b.setType(RECEIVE_MISSING);
-      b.setEngine(engine);
-      b.setBranch(branch);
-      b.addStateIds(state);
+      def b = SyncP.newBuilder()
+      b.setType(RECEIVE_MISSING)
+      b.setEngine(engine)
+      b.setBranch(branch)
+      b.addStateIds(state)
       for (ancestor <- ancestors)
-        b.addStates(ancestor);
-      send(dst, b.build());
+        b.addStates(ancestor)
+      send(dst, b.build())
     }
   }
 }

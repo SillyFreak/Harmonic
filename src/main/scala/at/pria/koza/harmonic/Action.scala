@@ -6,7 +6,6 @@
 
 package at.pria.koza.harmonic
 
-import scala.collection.mutable
 import scala.util.DynamicVariable
 
 /**
@@ -40,7 +39,7 @@ object Action {
  * @param engine the engine that is modified by this action
  */
 abstract class Action(engine: Engine) {
-  private val modifications = mutable.Stack[Modification]()
+  private var _modifications = List[Modification]()
 
   /**
    * <p>
@@ -64,8 +63,11 @@ abstract class Action(engine: Engine) {
    * </p>
    */
   def revert(): Unit = {
-    while (!modifications.isEmpty)
-      modifications.pop().revert()
+    while (!_modifications.isEmpty) {
+      val (m :: ms) = _modifications
+      m.revert()
+      _modifications = ms
+    }
   }
 
   /**
@@ -77,7 +79,7 @@ abstract class Action(engine: Engine) {
    * @param m the `Modification` to add
    */
   def addModification(m: Modification): Unit = {
-    modifications.push(m)
+    _modifications = m :: _modifications
   }
 
   /**

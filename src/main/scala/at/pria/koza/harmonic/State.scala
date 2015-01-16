@@ -6,7 +6,10 @@
 
 package at.pria.koza.harmonic
 
+import scala.util.control.Breaks._
+
 import java.lang.String._
+
 import at.pria.koza.harmonic.proto.HarmonicP.StateP
 import at.pria.koza.polybuf.PolybufConfig
 import at.pria.koza.polybuf.PolybufException
@@ -14,10 +17,10 @@ import at.pria.koza.polybuf.PolybufIO
 import at.pria.koza.polybuf.PolybufInput
 import at.pria.koza.polybuf.PolybufOutput
 import at.pria.koza.polybuf.PolybufSerializable
-import at.pria.koza.polybuf.proto.Polybuf.Obj
-import scala.util.control.Breaks._
-import com.google.protobuf.GeneratedMessage.GeneratedExtension
 import at.pria.koza.polybuf.proto.Polybuf
+import at.pria.koza.polybuf.proto.Polybuf.Obj
+
+import com.google.protobuf.GeneratedMessage.GeneratedExtension
 
 /**
  * <p>

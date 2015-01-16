@@ -37,4 +37,11 @@ class CommonTailSpec extends FlatSpec with Matchers {
 
     State.commonTail(list1, list2) should be(list1.drop(3))
   }
+
+  it should "return the common tail for two different lists of different lengths" in {
+    val list1 = List(0, 1, 2, 3, 4, 5, 6)
+    val list2 = List(9, 4, 5, 6)
+
+    State.commonTail(list1, list2) should be(list1.drop(4))
+  }
 }

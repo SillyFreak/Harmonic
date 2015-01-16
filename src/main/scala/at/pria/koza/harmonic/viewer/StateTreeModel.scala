@@ -20,11 +20,10 @@ import at.pria.koza.harmonic.State
  * @version V0.0 11.08.2013
  * @author SillyFreak
  */
-class StateTreeModel extends DefaultTreeModel(null) {
+class StateTreeModel extends DefaultTreeModel(new StateNode()) {
   private val nodes = mutable.Map[Long, StateNode]()
-  private val _root = new StateNode()
 
-  override def getRoot(): StateNode = _root
+  override def getRoot(): StateNode = root.asInstanceOf[StateNode]
 
   def resolve(state: State): StateNode =
     nodes.getOrElseUpdate(state.id, new StateNode(this, state))

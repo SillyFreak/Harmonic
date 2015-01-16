@@ -24,12 +24,19 @@ import at.pria.koza.harmonic.State
  * @version V0.0 11.08.2013
  * @author SillyFreak
  */
-class StateNode(val state: State, val parent: StateNode, source: StateTreeModel) extends AbstractTreeNode[StateNode](mutable.ListBuffer(), parent) {
-
-  private val childIndices = if (parent == null) null else Array(parent._children.size - 1)
-  private val childObjects = if (parent == null) null else Array[Object](this)
-  private val _path = if (parent == null) null else parent.path
+class StateNode(val state: State, parent: StateNode, source: StateTreeModel) extends AbstractTreeNode[StateNode](parent) {
   val labels = mutable.SortedSet[String]()
+
+  //AbstractTreeNode
+
+  private val _childSeq = mutable.ListBuffer[StateNode]()
+  override protected def childSeq = _childSeq
+
+  //used for fireTreeNodes*
+
+  private val childIndices = if (parent == null) null else Array(parent.childCount - 1)
+  private val childObjects = if (parent == null) null else Array[Object](this)
+  private val _path = pathArray
 
   private[viewer] def this() = this(null, null, null)
 
@@ -38,19 +45,17 @@ class StateNode(val state: State, val parent: StateNode, source: StateTreeModel)
       state,
       if (state.id == 0l) model.getRoot() else model.resolve(state.parent),
       model)
-    model.fireTreeNodesInserted(source, path, childIndices, childObjects)
+    model.fireTreeNodesInserted(source, _path, childIndices, childObjects)
   }
 
-  def fireChanged(): Unit = source.fireTreeNodesChanged(source, path, childIndices, childObjects)
-
-  override def getParent(): TreeNode = parent
+  def fireChanged(): Unit = source.fireTreeNodesChanged(source, _path, childIndices, childObjects)
 
   override def toString(): String = {
     if (state == null) return "<root>"
     val sb = new StringBuilder
     val it = labels.iterator
     while (it.hasNext) {
-      val lbl = it.next();
+      val lbl = it.next()
       if (lbl.startsWith("branch:")) sb += '[' ++= lbl.substring(7) += ']'
       else sb ++= lbl
       sb += ' '

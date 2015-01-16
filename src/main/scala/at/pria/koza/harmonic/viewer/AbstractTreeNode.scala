@@ -6,7 +6,8 @@
 
 package at.pria.koza.harmonic.viewer
 
-import scala.collection.JavaConversions
+import scala.collection.{ immutable, mutable }
+import scala.collection.JavaConversions._
 
 import java.util.Enumeration
 
@@ -20,35 +21,56 @@ import javax.swing.tree.TreeNode
  * @version V0.0 11.08.2013
  * @author SillyFreak
  */
-abstract class AbstractTreeNode[E <: TreeNode](private[viewer] val _children: Seq[E], parent: TreeNode) extends TreeNode {
+abstract class AbstractTreeNode[E <: TreeNode](val parent: TreeNode) extends TreeNode with Seq[E] {
+  //abstract members
+
+  protected def childSeq: Seq[E]
+
+  //Seq
+
+  def iterator: Iterator[E] = childSeq.iterator
+
+  def apply(idx: Int): E = childSeq(idx)
+  def length: Int = childSeq.length
+
+  //TreeNode
+
   override def getParent(): TreeNode = parent
 
-  protected[viewer] def path: Array[Object] = {
+  def allowsChildren: Boolean = childSeq != null
+  override def getAllowsChildren(): Boolean = allowsChildren
+
+  def childAt(index: Int): E =
+    if (!allowsChildren) throw new IndexOutOfBoundsException()
+    else childSeq(index)
+  override def getChildAt(childIndex: Int): E = childAt(childIndex)
+
+  def childCount: Int = if (!allowsChildren) 0 else childSeq.length
+  override def getChildCount(): Int = childCount
+
+  def indexOf(node: TreeNode): Int = if (!allowsChildren) -1 else childSeq.indexOf(node)
+  override def getIndex(node: TreeNode): Int = indexOf(node)
+
+  def leaf: Boolean = !allowsChildren || childCount == 0
+  override def isLeaf(): Boolean = leaf
+
+  override def children(): Enumeration[E] = (if (!allowsChildren) Seq.empty else childSeq).iterator
+
+  //additional members
+
+  protected[viewer] def path: immutable.Seq[Object] = {
     var path = List[Object]()
     var node: TreeNode = this
     while (node != null) {
       path = node :: path
       node = node.getParent()
     }
-    path.toArray(implicitly)
+    path
   }
-
-  override def getChildAt(childIndex: Int): TreeNode =
-    if (_children == null) throw new IndexOutOfBoundsException()
-    else _children(childIndex)
-
-  override def getChildCount(): Int =
-    if (_children == null) 0 else _children.size
-
-  override def getIndex(node: TreeNode): Int =
-    if (_children == null) -1 else _children.indexOf(node)
-
-  override def getAllowsChildren(): Boolean =
-    _children != null
-
-  override def isLeaf(): Boolean =
-    _children == null || _children.isEmpty
-
-  override def children(): Enumeration[E] =
-    JavaConversions.asJavaEnumeration((if (_children == null) Seq.empty else _children).iterator)
+  protected[viewer] def pathArray: Array[Object] = {
+    val p = path
+    val result = new Array[Object](p.length)
+    p.copyToArray(result)
+    result
+  }
 }

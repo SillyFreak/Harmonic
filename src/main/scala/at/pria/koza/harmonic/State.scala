@@ -227,9 +227,9 @@ private class IO(engine: Engine) extends PolybufIO[State] {
     val p = obj.getExtension(State.EXTENSION)
     val id = p.getId()
     //handle states already present properly
-    val result = engine.getState(id)
+    val result = engine.state(id)
 
     if (result != null) result
-    else new State(engine, engine.getState(p.getParent()), id, p.getAction())
+    else new State(engine, engine.state(p.getParent()), id, p.getAction())
   }
 }

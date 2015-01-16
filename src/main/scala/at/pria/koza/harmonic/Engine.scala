@@ -6,16 +6,10 @@
 
 package at.pria.koza.harmonic
 
-import java.lang.String._
-import java.util.Collections._
+import scala.collection.{ immutable, mutable }
 
-import java.util.ArrayList
-import java.util.Deque
-import java.util.HashMap
-import java.util.LinkedList
-import java.util.List
-import java.util.ListIterator
-import java.util.Map
+import java.lang.String._
+import java.util.EventListener
 import java.util.Random
 
 import at.pria.koza.polybuf.PolybufConfig
@@ -59,16 +53,28 @@ object Engine {
  * @param id the engine's ID.
  */
 class Engine(val id: Int) {
-  private val _entities = new HashMap[Integer, Entity]()
-  val entities: Map[Integer, Entity] = unmodifiableMap[Integer, Entity](_entities)
+  private var _entities = immutable.Map[Int, Entity]()
+  def entities: immutable.Map[Int, Entity] = _entities
+  def entity(id: Int): Entity =
+    //TODO change interface
+    _entities.get(id) match {
+      case Some(e) => e
+      case None    => null
+    }
 
-  private val _states = new HashMap[Long, State]()
-  val states: Map[Long, State] = unmodifiableMap[Long, State](_states)
+  private var _states = immutable.Map[Long, State]()
+  def states: immutable.Map[Long, State] = _states
+  def state(id: Long): State =
+    //TODO change interface
+    _states.get(id) match {
+      case Some(e) => e
+      case None    => null
+    }
 
   val config: PolybufConfig = new PolybufConfig()
 
-  private val stateListeners = new ArrayList[StateListener]()
-  private val headListeners = new ArrayList[HeadListener]()
+  private val stateListeners = mutable.ListBuffer[StateListener]()
+  private val headListeners = mutable.ListBuffer[HeadListener]()
 
   private var _nextStateId: Long = (id & 0xFFFFFFFFl) << 32
   private var _nextEntityId: Int = 0;
@@ -94,35 +100,20 @@ class Engine(val id: Int) {
   def this() =
     this(false)
 
-  def addStateListener(l: StateListener): Unit =
-    stateListeners.add(l)
+  def addStateListener(l: StateListener): Unit = stateListeners += l
+  def removeStateListener(l: StateListener): Unit = stateListeners -= l
 
-  def removeStateListener(l: StateListener): Unit =
-    stateListeners.remove(l)
+  def addHeadListener(l: HeadListener): Unit = headListeners += l
+  def removeHeadListener(l: HeadListener): Unit = headListeners -= l
 
-  def addHeadListener(l: HeadListener): Unit =
-    headListeners.add(l)
+  private[harmonic] def fire[T <: EventListener, U](listeners: Seq[T])(action: T => U): Unit =
+    listeners.synchronized { listeners.reverseIterator.foreach(action) }
 
-  def removeHeadListener(l: HeadListener): Unit =
-    headListeners.remove(l)
+  private[harmonic] def fireStateAdded(state: State): Unit =
+    fire(stateListeners) { _.stateAdded(state) }
 
-  private[harmonic] def fireStateAdded(state: State): Unit = {
-    stateListeners.synchronized {
-      val it = stateListeners.listIterator(stateListeners.size())
-      while (it.hasPrevious()) {
-        it.previous().stateAdded(state)
-      }
-    }
-  }
-
-  private[harmonic] def fireHeadMoved(prevHead: State, newHead: State): Unit = {
-    headListeners.synchronized {
-      val it = headListeners.listIterator(headListeners.size())
-      while (it.hasPrevious()) {
-        it.previous().headMoved(prevHead, newHead)
-      }
-    }
-  }
+  private[harmonic] def fireHeadMoved(prevHead: State, newHead: State): Unit =
+    fire(headListeners) { _.headMoved(prevHead, newHead) }
 
   /**
    * <p>
@@ -158,14 +149,14 @@ class Engine(val id: Int) {
     }
 
     //move forward to new head
-    val states = new LinkedList[State]()
+    var states = immutable.List[State]()
     current = head
     while (current != pred) {
-      states.addFirst(current)
+      states = current :: states
       current = current.parent
     }
-    for (state <- states.asInstanceOf[Iterable[State]]) { //TODO I think this fails at runtime
-      state.apply()
+    states.foreach {
+      _.apply()
     }
 
     //set new head
@@ -181,18 +172,7 @@ class Engine(val id: Int) {
    *
    * @param entity the entity to register in this engine
    */
-  def putEntity(entity: Entity): Unit =
-    new RegisterEntity(entity)()
-
-  /**
-   * <p>
-   * Returns the entity associated with the given ID.
-   * </p>
-   *
-   * @param id the ID to resolve
-   * @return the entity that is associated with the ID, or {@code null}
-   */
-  def getEntity(id: Int): Entity = entities.get(id)
+  def putEntity(entity: Entity): Unit = new RegisterEntity(entity)()
 
   /**
    * <p>
@@ -203,20 +183,10 @@ class Engine(val id: Int) {
    */
   def putState(state: State): Unit = {
     val id = state.id
-    if (states.containsKey(id)) throw new IllegalStateException()
-    _states.put(id, state)
+    if (_states.contains(id)) throw new IllegalStateException()
+    _states = _states.updated(id, state)
     fireStateAdded(state)
   }
-
-  /**
-   * <p>
-   * Returns the state associated with the given ID.
-   * </p>
-   *
-   * @param id the ID to resolve
-   * @return the state that is associated with the ID, or {@code null}
-   */
-  def getState(id: Long): State = states.get(id)
 
   override def toString(): String = format("%s@%08X", (getClass().getSimpleName(), id))
 
@@ -224,12 +194,13 @@ class Engine(val id: Int) {
     private[harmonic] override def apply0(): Unit = {
       val id = _nextEntityId
       _nextEntityId += 1
+      if (_entities.contains(id)) throw new IllegalStateException()
       entity.setEngine(Engine.this, id)
-      _entities.put(id, entity)
+      _entities = _entities.updated(id, entity)
     }
 
     private[harmonic] override def revert(): Unit = {
-      _entities.remove(entity.id)
+      _entities = _entities.filterKeys { _ != entity.id }
       entity.setEngine(null, -1)
       _nextEntityId -= 1
     }

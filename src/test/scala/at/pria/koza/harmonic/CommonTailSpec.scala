@@ -26,6 +26,15 @@ class CommonTailSpec extends FlatSpec with Matchers {
   }
 
   it should "return the original list for two equal lists" in {
-    State.commonTail("abcd", "abcd") should be("abcd": Seq[Char])
+    val list = List(1, 2, 3, 4)
+
+    State.commonTail(list, list) should be(list)
+  }
+
+  it should "return the common tail for two different lists of equal length" in {
+    val list1 = List(1, 2, 3, 4, 5, 6)
+    val list2 = List(7, 8, 9, 4, 5, 6)
+
+    State.commonTail(list1, list2) should be(list1.drop(3))
   }
 }

@@ -41,57 +41,38 @@ object State {
   }
 }
 
-/**
- * <p>
- * This constructor is only directly called by the {@link IO}. In contrast to a newly created state, a
- * deserialized state has an ID assigned by a different engine.
- * </p>
- *
- * @param engine the engine for which this state is created/deserialized
- * @param parent the parent state for this state
- * @param id the ID assigned to this state by the engine that originally created it
- * @param action the action leading to this state
- */
-class State(val engine: Engine, val parent: State, val id: Long, private[harmonic] val actionObj: Obj) extends PolybufSerializable {
-  private var _action: Action = _
+abstract class State(val engine: Engine, val id: Long) extends PolybufSerializable {
   engine.putState(this)
 
-  /**
-   * <p>
-   * Creates a root state for the given engine.
-   * </p>
-   *
-   * @param engine the engine for which this is the root state
-   */
-  private[harmonic] def this(_engine: Engine) = this(_engine, null, 0, null)
+  //PolybufSerializable
+  override def typeId: Int = State.FIELD
 
-  /**
-   * <p>
-   * Creates a new state, using the {@linkplain Engine#nextStateId() next generated state ID} for that engine.
-   * </p>
-   *
-   * @param parent the parent state for this new state
-   * @param action the action leading to this new state
-   */
-  private[harmonic] def this(_parent: State, _action: Action) =
+  def commonPredecessor(other: State): State
+
+  def engineId: Int = (id >> 32).toInt
+}
+
+class RootState(engine: Engine) extends State(engine, 0) {
+  def commonPredecessor(other: State): State = this
+
+  override def toString(): String = getClass().getSimpleName()
+}
+
+class DerivedState(val parent: State, id: Long, val actionObj: Obj) extends State(parent.engine, id) {
+  private var _action: Action = _
+  def action: Action = _action
+
+  def this(parent: State, action: Action) = {
     this(
-      _parent.engine,
-      _parent,
-      _parent.engine.nextStateId(),
+      parent,
+      parent.engine.nextStateId(),
       try {
-        new PolybufOutput(_parent.engine.config).writeObject(_action)
+        new PolybufOutput(parent.engine.config).writeObject(action)
       } catch {
         case ex: PolybufException => throw new IllegalArgumentException(ex)
       })
-
-  /**
-   * <p>
-   * Returns the id of the engine that created this state, extracted from this state's id.
-   * </p>
-   *
-   * @return
-   */
-  def engineId: Int = (id >> 32).toInt
+    _action = action
+  }
 
   def apply(): Unit = {
     assert(_action == null)
@@ -111,23 +92,11 @@ class State(val engine: Engine, val parent: State, val id: Long, private[harmoni
 
   /**
    * <p>
-   * Returns the action that led from the parent to this state. This method will return {@code null} if in the
-   * current head state of the engine, the action was not executed.
-   * </p>
-   *
-   * @return the action that led from the parent to this state
-   */
-  def action: Action = _action
-
-  override def typeId: Int = State.FIELD
-
-  /**
-   * <p>
    * Computes and returns the nearest common predecessor between this and another state. More formally, this
-   * returns the state that is a predecessor of both {@code this} and {@code other}, but whose children are not.
+   * returns the state that is a predecessor of both `this` and `other`, but whose children are not.
    * </p>
    * <p>
-   * This method may return the root state of the engine, but never {@code null}.
+   * This method may return the root state of the engine, but never `null`.
    * </p>
    *
    * @param other the other state for which to find the nearest common predecessor
@@ -141,51 +110,60 @@ class State(val engine: Engine, val parent: State, val id: Long, private[harmoni
     //http://twistedoakstudios.com/blog/Post3280_intersecting-linked-lists-faster
 
     // find *any* common node, and the distances to it
-    var node0 = this
-    var node1 = other
     var dist0 = 0
     var dist1 = 0
-    var stepSize = 1
 
-    while (node0 != node1) {
-      // advance each node progressively farther, watching for the other node
-      breakable {
-        for (i <- 0 to stepSize) {
-          if (node0.id == 0) break
-          if (node0 == node1) break
-          node0 = node0.parent
-          dist0 += 1
+    {
+      var node0 = this: State
+      var node1 = other
+      var stepSize = 1
+
+      while (node0 != node1) {
+        // advance each node progressively farther, watching for the other node
+        breakable {
+          for (_ <- 0 to stepSize) {
+            if (node0 == node1) break
+            node0 match {
+              case root: RootState => break
+              case node: DerivedState =>
+                node0 = node.parent
+                dist0 += 1
+            }
+          }
         }
-      }
-      stepSize *= 2
-      breakable {
-        for (i <- 0 to stepSize) {
-          if (node1.id == 0) break
-          if (node0 == node1) break
-          node1 = node1.parent
-          dist1 += 1
+        stepSize *= 2
+        breakable {
+          for (_ <- 0 to stepSize) {
+            if (node0 == node1) break
+            node1 match {
+              case root: RootState => break
+              case node: DerivedState =>
+                node1 = node.parent
+                dist1 += 1
+            }
+          }
         }
+        stepSize *= 2
       }
-      stepSize *= 2
     }
 
-    node0 = this
-    node1 = other
+    var node0 = this: State
+    var node1 = other
     // align heads to be an equal distance from the first common node
     var r = dist1 - dist0
     while (r < 0) {
-      node0 = node0.parent
+      node0 = node0.asInstanceOf[DerivedState].parent
       r += 1
     }
     while (r > 0) {
-      node1 = node1.parent
+      node1 = node1.asInstanceOf[DerivedState].parent
       r -= 1
     }
 
     // advance heads until they meet at the first common node
     while (node0 != node1) {
-      node0 = node0.parent
-      node1 = node1.parent
+      node0 = node0.asInstanceOf[DerivedState].parent
+      node1 = node1.asInstanceOf[DerivedState].parent
     }
 
     node0
@@ -193,12 +171,9 @@ class State(val engine: Engine, val parent: State, val id: Long, private[harmoni
 
   override def toString(): String = {
     val actionType =
-      if (actionObj == null) null
-      else engine.config.get(actionObj.getTypeId) match {
-        case Some(io) =>
-          io.extension.getDescriptor().getMessageType().getName()
-        case None =>
-          null
+      engine.config.get(actionObj.getTypeId) match {
+        case Some(io) => io.extension.getDescriptor().getMessageType().getName()
+        case None     => null
       }
     format("%s@%016X: %s", (getClass().getSimpleName(), id, actionType))
   }
@@ -211,12 +186,15 @@ private class IO(engine: Engine) extends PolybufIO[State] {
   override def serialize(out: PolybufOutput, instance: State, obj: Obj.Builder): Unit = {
     val b = StateP.newBuilder()
     b.setId(instance.id)
-    //handle the root state differently:
-    //it has id zero, i.e. no original engine, no parent and no action
-    //it's inherently different, and must be handled differently
-    if (instance.id != 0l) {
-      b.setParent(instance.parent.id)
-      b.setAction(instance.actionObj)
+
+    instance match {
+      case root: RootState =>
+      //handle the root state differently:
+      //it has id zero, i.e. no original engine, no parent and no action
+      //it's inherently different, and must be handled differently
+      case node: DerivedState =>
+        b.setParent(node.parent.id)
+        b.setAction(node.actionObj)
     }
 
     obj.setExtension(State.EXTENSION, b.build())
@@ -230,6 +208,7 @@ private class IO(engine: Engine) extends PolybufIO[State] {
     val result = engine.state(id)
 
     if (result != null) result
-    else new State(engine, engine.state(p.getParent()), id, p.getAction())
+    else if (id == 0) new RootState(engine)
+    else new DerivedState(engine.state(p.getParent()), id, p.getAction())
   }
 }

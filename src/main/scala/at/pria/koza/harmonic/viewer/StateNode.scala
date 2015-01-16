@@ -15,6 +15,8 @@ import java.util.List
 import javax.swing.tree.TreeNode
 
 import at.pria.koza.harmonic.State
+import at.pria.koza.harmonic.RootState
+import at.pria.koza.harmonic.DerivedState
 
 /**
  * <p>
@@ -43,7 +45,10 @@ class StateNode(val state: State, parent: StateNode, source: StateTreeModel) ext
   private[viewer] def this(model: StateTreeModel, state: State) = {
     this(
       state,
-      if (state.id == 0l) model.getRoot() else model.resolve(state.parent),
+      state match {
+        case root: RootState    => model.getRoot()
+        case node: DerivedState => model.resolve(node.parent)
+      },
       model)
     model.fireTreeNodesInserted(source, _path, childIndices, childObjects)
   }

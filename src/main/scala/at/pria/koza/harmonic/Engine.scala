@@ -79,7 +79,7 @@ class Engine(val id: Int) {
   private var _nextStateId: Long = (id & 0xFFFFFFFFl) << 32
   private var _nextEntityId: Int = 0;
 
-  private var _head: State = new State(this)
+  private var _head: State = new RootState(this)
   def head = _head
 
   /**
@@ -144,8 +144,8 @@ class Engine(val id: Int) {
     //roll back to pred
     var current = _head
     while (current != pred) {
-      current.revert()
-      current = current.parent
+      current.asInstanceOf[DerivedState].revert()
+      current = current.asInstanceOf[DerivedState].parent
     }
 
     //move forward to new head
@@ -153,10 +153,10 @@ class Engine(val id: Int) {
     current = head
     while (current != pred) {
       states = current :: states
-      current = current.parent
+      current = current.asInstanceOf[DerivedState].parent
     }
     states.foreach {
-      _.apply()
+      _.asInstanceOf[DerivedState].apply()
     }
 
     //set new head

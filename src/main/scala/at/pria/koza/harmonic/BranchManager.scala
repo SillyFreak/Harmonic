@@ -209,7 +209,7 @@ class BranchManager(val engine: Engine) {
   }
 
   def execute[T <: Action](action: T): T = {
-    val state = new State(branchTip(_currentBranch), action)
+    val state = new DerivedState(branchTip(_currentBranch), action)
     engine.setHead(state)
     createOrMoveBranch(_currentBranch, put(state))
     action
@@ -394,11 +394,16 @@ class BranchManager(val engine: Engine) {
     def this(state: State) = {
       this(
         state.id,
-        if (state.id != 0) state.parent.id else 0)
+        state match {
+          case root: RootState    => 0
+          case node: DerivedState => node.parent.id
+        })
 
       _state = state;
-      if (stateId != 0)
-        _parent = put(state.parent)
+      _parent = state match {
+        case root: RootState    => null
+        case node: DerivedState => put(node.parent)
+      }
       addEngine(engine.id)
     }
 
@@ -438,7 +443,7 @@ class BranchManager(val engine: Engine) {
         if (_parent == null) _parent = states.get(parentId)
         if (_parent == null || !_parent.resolve()) false
         else {
-          _state = new State(engine, parent.state, stateId, _action)
+          _state = new DerivedState(parent.state, stateId, _action)
           addEngine(engine.id)
           addEngine(state.engineId)
           true

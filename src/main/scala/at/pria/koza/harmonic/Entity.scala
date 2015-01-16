@@ -36,7 +36,7 @@ trait Entity extends Serializable {
    *
    * @return the engine to which this entity belongs
    */
-  def getEngine(): Engine
+  def engine: Engine
 
   /**
    * <p>
@@ -45,5 +45,5 @@ trait Entity extends Serializable {
    *
    * @return this entity's id
    */
-  def getId(): Int
+  def id: Int
 }

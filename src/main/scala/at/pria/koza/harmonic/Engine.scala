@@ -229,7 +229,7 @@ class Engine(val id: Int) {
     }
 
     private[harmonic] override def revert(): Unit = {
-      _entities.remove(entity.getId())
+      _entities.remove(entity.id)
       entity.setEngine(null, -1)
       _nextEntityId -= 1
     }

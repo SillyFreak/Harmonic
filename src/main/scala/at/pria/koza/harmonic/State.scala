@@ -39,6 +39,62 @@ object State {
   def configure(config: PolybufConfig, engine: Engine): Unit = {
     config.add(getIO(engine))
   }
+
+  /**
+   * <p>
+   * Computes and returns the longest common tail of two Seqs.
+   * </p>
+   * <p>
+   * This method may return the root state of the engine, but never `null`.
+   * </p>
+   *
+   * @param other the other state for which to find the nearest common predecessor
+   * @return the nearest common predecessor state
+   * @see <a href="http://twistedoakstudios.com/blog/Post3280__">Algorithm source</a>
+   */
+  def commonTail[T](as: Seq[T], bs: Seq[T]): Seq[T] = {
+    //code taken from
+    //http://twistedoakstudios.com/blog/Post3280_intersecting-linked-lists-faster
+
+    // find *any* common node, and the distances to it
+    val r = {
+      val lists = Array(as, bs)
+      val dists = Array(0, 0)
+      var stepSize = 1
+
+      breakable {
+        while (true) {
+          // advance each node progressively farther, watching for the other node
+          for (i <- 0 to 1) {
+            for (_ <- 1 to stepSize) {
+              if (lists(0).head == lists(1).head) break
+              lists(i) match {
+                case Nil =>
+                  break
+                case _ :: tail =>
+                  dists(i) += 1
+                  lists(i) = tail
+              }
+            }
+          }
+          stepSize *= 2
+        }
+      }
+      dists(1) - dists(0)
+    }
+
+    // align heads to be an equal distance from the first common node
+    var _as = as.drop(-r)
+    var _bs = bs.drop(r)
+
+    // advance heads until they meet at the first common node
+    while (_as.head != _bs.head) {
+      _as = _as.tail
+      _bs = _bs.tail
+    }
+
+    _as
+  }
 }
 
 abstract class State(val engine: Engine, val id: Long) extends PolybufSerializable {
@@ -47,13 +103,34 @@ abstract class State(val engine: Engine, val id: Long) extends PolybufSerializab
   //PolybufSerializable
   override def typeId: Int = State.FIELD
 
-  def commonPredecessor(other: State): State
+  def seq: List[State]
+  def seqNoRoot: List[DerivedState]
 
   def engineId: Int = (id >> 32).toInt
+
+  /**
+   * <p>
+   * Computes and returns the nearest common predecessor between this and another state. More formally, this
+   * returns the state that is a predecessor of both `this` and `other`, but whose children are not.
+   * </p>
+   * <p>
+   * This method may return the root state of the engine, but never `null`.
+   * </p>
+   *
+   * @param other the other state for which to find the nearest common predecessor
+   * @return the nearest common predecessor state
+   * @see <a href="http://twistedoakstudios.com/blog/Post3280__">Algorithm source</a>
+   */
+  def commonPredecessor(other: State): State = {
+    if (engine != other.engine) throw new IllegalArgumentException()
+    //the root state is shared in an engine, so ???.head is safe
+    else State.commonTail(this.seq, other.seq).head
+  }
 }
 
 class RootState(engine: Engine) extends State(engine, 0) {
-  def commonPredecessor(other: State): State = this
+  def seq: List[State] = this :: Nil
+  def seqNoRoot: List[DerivedState] = Nil
 
   override def toString(): String = getClass().getSimpleName()
 }
@@ -74,6 +151,9 @@ class DerivedState(val parent: State, id: Long, val actionObj: Obj) extends Stat
     _action = action
   }
 
+  def seq: List[State] = this :: parent.seq
+  def seqNoRoot: List[DerivedState] = this :: parent.seqNoRoot
+
   def apply(): Unit = {
     assert(_action == null)
     try {
@@ -88,85 +168,6 @@ class DerivedState(val parent: State, id: Long, val actionObj: Obj) extends Stat
     assert(_action != null)
     _action.revert()
     _action = null
-  }
-
-  /**
-   * <p>
-   * Computes and returns the nearest common predecessor between this and another state. More formally, this
-   * returns the state that is a predecessor of both `this` and `other`, but whose children are not.
-   * </p>
-   * <p>
-   * This method may return the root state of the engine, but never `null`.
-   * </p>
-   *
-   * @param other the other state for which to find the nearest common predecessor
-   * @return the nearest common predecessor state
-   * @see <a href="http://twistedoakstudios.com/blog/Post3280__">Algorithm source</a>
-   */
-  def commonPredecessor(other: State): State = {
-    if (engine != other.engine) throw new IllegalArgumentException()
-
-    //code taken from
-    //http://twistedoakstudios.com/blog/Post3280_intersecting-linked-lists-faster
-
-    // find *any* common node, and the distances to it
-    var dist0 = 0
-    var dist1 = 0
-
-    {
-      var node0 = this: State
-      var node1 = other
-      var stepSize = 1
-
-      while (node0 != node1) {
-        // advance each node progressively farther, watching for the other node
-        breakable {
-          for (_ <- 0 to stepSize) {
-            if (node0 == node1) break
-            node0 match {
-              case root: RootState => break
-              case node: DerivedState =>
-                node0 = node.parent
-                dist0 += 1
-            }
-          }
-        }
-        stepSize *= 2
-        breakable {
-          for (_ <- 0 to stepSize) {
-            if (node0 == node1) break
-            node1 match {
-              case root: RootState => break
-              case node: DerivedState =>
-                node1 = node.parent
-                dist1 += 1
-            }
-          }
-        }
-        stepSize *= 2
-      }
-    }
-
-    var node0 = this: State
-    var node1 = other
-    // align heads to be an equal distance from the first common node
-    var r = dist1 - dist0
-    while (r < 0) {
-      node0 = node0.asInstanceOf[DerivedState].parent
-      r += 1
-    }
-    while (r > 0) {
-      node1 = node1.asInstanceOf[DerivedState].parent
-      r -= 1
-    }
-
-    // advance heads until they meet at the first common node
-    while (node0 != node1) {
-      node0 = node0.asInstanceOf[DerivedState].parent
-      node1 = node1.asInstanceOf[DerivedState].parent
-    }
-
-    node0
   }
 
   override def toString(): String = {

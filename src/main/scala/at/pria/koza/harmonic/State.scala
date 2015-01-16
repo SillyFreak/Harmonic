@@ -42,17 +42,15 @@ object State {
 
   /**
    * <p>
-   * Computes and returns the longest common tail of two Seqs.
-   * </p>
-   * <p>
-   * This method may return the root state of the engine, but never `null`.
+   * Computes and returns the longest common tail of two `Seq`s. If two (finite) `Seq`s are otherwise separate,
+   * their common tail will be `Nil`.
    * </p>
    *
-   * @param other the other state for which to find the nearest common predecessor
-   * @return the nearest common predecessor state
    * @see <a href="http://twistedoakstudios.com/blog/Post3280__">Algorithm source</a>
    */
   def commonTail[T](as: Seq[T], bs: Seq[T]): Seq[T] = {
+    if (as.isEmpty || bs.isEmpty) return Nil
+
     //code taken from
     //http://twistedoakstudios.com/blog/Post3280_intersecting-linked-lists-faster
 
@@ -67,10 +65,10 @@ object State {
           // advance each node progressively farther, watching for the other node
           for (i <- 0 to 1) {
             for (_ <- 1 to stepSize) {
-              if (lists(0).head == lists(1).head) break
+              if (lists(0).head equals lists(1).head) break
               lists(i) match {
                 case Nil =>
-                  break
+                  return Nil
                 case _ :: tail =>
                   dists(i) += 1
                   lists(i) = tail
@@ -88,7 +86,7 @@ object State {
     var _bs = bs.drop(r)
 
     // advance heads until they meet at the first common node
-    while (_as.head != _bs.head) {
+    while (!(_as.head equals _bs.head)) {
       _as = _as.tail
       _bs = _bs.tail
     }

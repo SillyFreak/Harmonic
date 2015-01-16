@@ -47,7 +47,7 @@ abstract class Modification {
    * @see Action#get()
    */
   private[harmonic] def addToAction(): Unit = {
-    Action.get().addModification(this)
+    Action.value.addModification(this)
   }
 
   /**

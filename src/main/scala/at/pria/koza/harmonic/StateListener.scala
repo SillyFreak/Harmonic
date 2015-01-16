@@ -26,5 +26,5 @@ trait StateListener extends EventListener {
    *
    * @param state the state that was added
    */
-  def stateAdded(state: State): Unit
+  def stateAdded(state: State): Unit = {}
 }

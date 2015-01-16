@@ -25,5 +25,5 @@ trait HeadListener extends EventListener {
    * @param prevHead the engine's head previous to the move
    * @param newHead the engine's new head state
    */
-  def headMoved(prevHead: State, newHead: State): Unit
+  def headMoved(prevHead: State, newHead: State): Unit = {}
 }

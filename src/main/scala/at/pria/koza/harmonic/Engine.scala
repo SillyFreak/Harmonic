@@ -32,13 +32,10 @@ import at.pria.koza.polybuf.PolybufConfig
 object Engine {
   private lazy val random = new Random()
 
-  private def getRandom(): Random = random
-
   private def nextNonZeroInt(): Int = {
-    val r = getRandom()
     var result: Int = 0
     do {
-      result = r.nextInt()
+      result = random.nextInt()
     } while (result != 0)
     result
   }
@@ -48,15 +45,28 @@ object Engine {
  * <p>
  * Creates an engine with the given ID. Spectating engines have an ID equal to zero.
  * </p>
+ * <p>
+ * Returns this engine's ID. An engine that is only spectating (i.e. receiving actions, but not sending any)
+ * may have an ID of 0. Other engines have a non-zero random 32 bit ID.
+ * </p>
+ * <p>
+ * This ID is used to prevent conflicts in IDs of states created by this engine: Instead of assigning random
+ * IDs to states and hoping that no state IDs in an engine's execution ever clash, random IDs are only assigned
+ * to engines, and states get IDs based on these. As the set of engines is relatively stable during the
+ * execution of an application, as opposed to the set of states, this scheme is safer.
+ * </p>
  *
  * @param id the engine's ID.
  */
-class Engine(id: Int) {
-  private val entities = new HashMap[Integer, Entity]()
-  private val entitiesView = unmodifiableMap[Integer, Entity](entities)
-  private val states = new HashMap[Long, State]()
-  private val statesView = unmodifiableMap[Long, State](states)
-  private val config = new PolybufConfig()
+class Engine(val id: Int) {
+  private val _entities = new HashMap[Integer, Entity]()
+  val entities: Map[Integer, Entity] = unmodifiableMap[Integer, Entity](_entities)
+
+  private val _states = new HashMap[Long, State]()
+  val states: Map[Long, State] = unmodifiableMap[Long, State](_states)
+
+  val config: PolybufConfig = new PolybufConfig()
+
   private val stateListeners = new ArrayList[StateListener]()
   private val headListeners = new ArrayList[HeadListener]()
 
@@ -64,6 +74,7 @@ class Engine(id: Int) {
   private var _nextEntityId: Int = 0;
 
   private var _head: State = new State(this)
+  def head = _head
 
   /**
    * <p>
@@ -82,8 +93,6 @@ class Engine(id: Int) {
    */
   def this() =
     this(false)
-
-  def getConfig(): PolybufConfig = config
 
   def addStateListener(l: StateListener): Unit =
     stateListeners.add(l)
@@ -129,22 +138,6 @@ class Engine(id: Int) {
 
   /**
    * <p>
-   * Returns this engine's ID. An engine that is only spectating (i.e. receiving actions, but not sending any)
-   * may have an ID of 0. Other engines have a non-zero random 32 bit ID.
-   * </p>
-   * <p>
-   * This ID is used to prevent conflicts in IDs of states created by this engine: Instead of assigning random
-   * IDs to states and hoping that no state IDs in an engine's execution ever clash, random IDs are only assigned
-   * to engines, and states get IDs based on these. As the set of engines is relatively stable during the
-   * execution of an application, as opposed to the set of states, this scheme is safer.
-   * </p>
-   *
-   * @return this engine's ID
-   */
-  def getId(): Int = id
-
-  /**
-   * <p>
    * Moves this engine's head to the given state.
    * </p>
    *
@@ -155,21 +148,21 @@ class Engine(id: Int) {
       throw new IllegalArgumentException()
 
     //common predecessor
-    val pred = _head.getCommonPredecessor(head)
+    val pred = _head.commonPredecessor(head)
 
     //roll back to pred
     var current = _head
     while (current != pred) {
       current.revert()
-      current = current.getParent()
+      current = current.parent
     }
 
     //move forward to new head
-    val states = new LinkedList[State]();
+    val states = new LinkedList[State]()
     current = head
     while (current != pred) {
       states.addFirst(current)
-      current = current.getParent()
+      current = current.parent
     }
     for (state <- states.asInstanceOf[Iterable[State]]) { //TODO I think this fails at runtime
       state.apply()
@@ -183,22 +176,13 @@ class Engine(id: Int) {
 
   /**
    * <p>
-   * Returns this engine's head state.
-   * </p>
-   *
-   * @return this engine's head state
-   */
-  def getHead(): State = _head
-
-  /**
-   * <p>
    * Adds an entity to this engine, assigning it a unique id.
    * </p>
    *
    * @param entity the entity to register in this engine
    */
   def putEntity(entity: Entity): Unit =
-    new RegisterEntity(entity).apply()
+    new RegisterEntity(entity)()
 
   /**
    * <p>
@@ -210,8 +194,6 @@ class Engine(id: Int) {
    */
   def getEntity(id: Int): Entity = entities.get(id)
 
-  def getEntities(): Map[Integer, Entity] = entitiesView
-
   /**
    * <p>
    * Adds a state to this engine.
@@ -220,9 +202,9 @@ class Engine(id: Int) {
    * @param state the state to be added
    */
   def putState(state: State): Unit = {
-    val id = state.getId()
+    val id = state.id
     if (states.containsKey(id)) throw new IllegalStateException()
-    states.put(id, state)
+    _states.put(id, state)
     fireStateAdded(state)
   }
 
@@ -234,9 +216,7 @@ class Engine(id: Int) {
    * @param id the ID to resolve
    * @return the state that is associated with the ID, or {@code null}
    */
-  def getState(id: Long): State = states.get(id);
-
-  def getStates(): Map[Long, State] = statesView
+  def getState(id: Long): State = states.get(id)
 
   override def toString(): String = format("%s@%08X", (getClass().getSimpleName(), id))
 
@@ -244,14 +224,14 @@ class Engine(id: Int) {
     private[harmonic] override def apply0(): Unit = {
       val id = _nextEntityId
       _nextEntityId += 1
-      entity.setEngine(Engine.this, id);
-      entities.put(id, entity);
+      entity.setEngine(Engine.this, id)
+      _entities.put(id, entity)
     }
 
     private[harmonic] override def revert(): Unit = {
-      entities.remove(entity.getId());
-      entity.setEngine(null, -1);
-      _nextEntityId -= 1;
+      _entities.remove(entity.getId())
+      entity.setEngine(null, -1)
+      _nextEntityId -= 1
     }
   }
 }

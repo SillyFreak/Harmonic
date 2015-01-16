@@ -6,19 +6,14 @@
 
 package at.pria.koza.harmonic
 
-import java.util.Collections._
+import scala.collection.JavaConversions._
 
+import java.util.Collections._
 import java.util.ArrayList
 import java.util.HashMap
 import java.util.HashSet
-import java.util.LinkedList
-import java.util.List
-import java.util.ListIterator
-import java.util.Map
-import java.util.Set
 
 import at.pria.koza.harmonic.BranchManager.SyncCallback
-import at.pria.koza.harmonic.proto.HarmonicP.StateP
 import at.pria.koza.polybuf.PolybufConfig
 import at.pria.koza.polybuf.PolybufException
 import at.pria.koza.polybuf.PolybufIO
@@ -56,7 +51,7 @@ object BranchManager {
      * receiveUpdate()} on the receiving BranchManager.
      * </p>
      */
-    def sendUpdateCallback(engine: Int, branch: String, state: Obj, ancestors: Long*): Unit;
+    def sendUpdateCallback(engine: Int, branch: String, state: Obj, ancestors: Long*): Unit = {}
 
     /**
      * <p>
@@ -64,7 +59,7 @@ object BranchManager {
      * sendMissing()} on the sending BranchManager.
      * </p>
      */
-    def receiveUpdateCallback(engine: Int, branch: String, ancestor: Long): Unit;
+    def receiveUpdateCallback(engine: Int, branch: String, ancestor: Long): Unit = {}
 
     /**
      * <p>
@@ -72,7 +67,7 @@ object BranchManager {
      * receiveMissing()} on the receiving BranchManager.
      * </p>
      */
-    def sendMissingCallback(engine: Int, branch: String, state: Long, ancestors: Obj*): Unit;
+    def sendMissingCallback(engine: Int, branch: String, state: Long, ancestors: Obj*): Unit = {}
   }
 }
 
@@ -81,13 +76,22 @@ object BranchManager {
  * Creates a new branch manager.
  * </p>
  */
-class BranchManager(engine: Engine) {
+class BranchManager(val engine: Engine) {
+  private val _branches = new HashMap[String, Array[MetaState]]()
+  val branches = unmodifiableMap[String, Array[MetaState]](_branches).keySet()
 
-  private val branches = new HashMap[String, Array[MetaState]]()
-  private val branchesView = unmodifiableMap[String, Array[MetaState]](branches)
   private val states = new HashMap[Long, MetaState]()
   private val branchListeners = new ArrayList[BranchListener]()
+
   private var _currentBranch = BranchManager.BRANCH_DEFAULT
+  def currentBranch = _currentBranch
+
+  def currentBranch(branch: String): Unit = {
+    val tip = branchTip(branch);
+    engine.setHead(tip);
+    _currentBranch = branch;
+  }
+
   //put the root
   createBranch(_currentBranch, engine.getState(0l))
 
@@ -123,15 +127,6 @@ class BranchManager(engine: Engine) {
    * @see Engine#Engine(int)
    */
   def this(id: Int) = this(new Engine(id))
-
-  /**
-   * <p>
-   * Returns the engine underlying this BranchManager. The engine must not be modified mannually.
-   * </p>
-   *
-   * @return
-   */
-  def getEngine(): Engine = engine
 
   //listeners
 
@@ -169,39 +164,39 @@ class BranchManager(engine: Engine) {
   //branch mgmt
 
   def createBranchHere(branch: String): Unit =
-    createBranch(branch, getBranchTip(_currentBranch))
+    createBranch(branch, branchTip(currentBranch))
 
   def createBranch(branch: String, state: State): Unit = {
-    if (state.getEngine() != engine) throw new IllegalArgumentException()
-    if (branches.containsKey(branch)) throw new IllegalArgumentException()
+    if (state.engine != engine) throw new IllegalArgumentException()
+    if (_branches.containsKey(branch)) throw new IllegalArgumentException()
     createOrMoveBranch(branch, put(state))
   }
 
   def deleteBranch(branch: String): Unit = {
     if (_currentBranch.equals(branch)) throw new IllegalArgumentException()
-    val head = branches.remove(branch)
+    val head = _branches.remove(branch)
     if (head == null) throw new IllegalArgumentException()
     fireBranchDeleted(this, branch, head(0).state)
   }
 
-  def getBranchTip(branch: String): State = {
-    val tip = branches.get(branch)
+  def branchTip(branch: String): State = {
+    val tip = _branches.get(branch)
     if (tip == null) throw new IllegalArgumentException()
     tip(0).state
   }
 
-  def setBranchTip(branch: String, newHead: State): State = {
-    if (newHead.getEngine() != engine) throw new IllegalArgumentException()
-    if (!branches.containsKey(branch)) throw new IllegalArgumentException()
+  def branchTip(branch: String, newHead: State): State = {
+    if (newHead.engine != engine) throw new IllegalArgumentException()
+    if (!_branches.containsKey(branch)) throw new IllegalArgumentException()
     createOrMoveBranch(branch, put(newHead)).state
   }
 
   private def createOrMoveBranch(branch: String, newHead: MetaState): MetaState = {
-    var tip = branches.get(branch)
+    var tip = _branches.get(branch)
     if (tip == null) {
       tip = new Array[MetaState](1)
       tip(0) = newHead
-      branches.put(branch, tip)
+      _branches.put(branch, tip)
     }
     val oldHead = tip(0)
     tip(0) = newHead
@@ -213,23 +208,11 @@ class BranchManager(engine: Engine) {
     oldHead
   }
 
-  def getCurrentBranch(): String = _currentBranch
-
-  def setCurrentBranch(branch: String): Unit = {
-    val tip = getBranchTip(branch);
-    engine.setHead(tip);
-    _currentBranch = branch;
-  }
-
   def execute[T <: Action](action: T): T = {
-    val state = new State(getBranchTip(_currentBranch), action)
+    val state = new State(branchTip(_currentBranch), action)
     engine.setHead(state)
     createOrMoveBranch(_currentBranch, put(state))
     action
-  }
-
-  def getBranches(): Set[String] = {
-    return branchesView.keySet();
   }
 
   //receive branch sync
@@ -255,24 +238,22 @@ class BranchManager(engine: Engine) {
    *         is unknown; the {@code state}'s id if the full branch is known
    */
   def receiveUpdate(engine: Int, branch: String, state: Obj, ancestors: Seq[Long], callback: SyncCallback): Unit = {
-    //MetaState newHead = deserialize(state);
-    //if(newHead.resolve()) {
-    //    //we have all we need
-    //    newHead.addEngine(engine);
-    //
-    //    createOrMoveBranch(branch, newHead);
-    //
-    //} else {
-    //    //we need additional states
-    //    for(long l:ancestors)
-    //        if(states.containsKey(l)) {
-    //            callback.receiveUpdateCallback(this.engine.getId(), branch, l);
-    //            return;
-    //        }
-    //
-    //    //we know none of the given ancestors
-    //    callback.receiveUpdateCallback(this.engine.getId(), branch, 0l);
-    //}
+    val newHead = deserialize(state)
+    if (newHead.resolve()) {
+      //we have all we need
+      newHead.addEngine(engine)
+
+      createOrMoveBranch(branch, newHead);
+
+    } else {
+      //we need additional states
+      val l = ancestors.find { states.containsKey(_) } match {
+        case Some(l) => l
+        case None    => 0l
+      }
+
+      callback.receiveUpdateCallback(this.engine.id, branch, 0l)
+    }
   }
 
   /**
@@ -291,16 +272,16 @@ class BranchManager(engine: Engine) {
    * @param ancestors a list of ancestor states that is missing from the local branch, in chronological order
    */
   def receiveMissing(engine: Int, branch: String, state: Long, ancestors: Seq[Obj]): Unit = {
-    //for(Obj obj:ancestors) {
-    //    MetaState s = deserialize(obj);
-    //    if(!s.resolve()) throw new AssertionError();
-    //}
-    //
-    //MetaState newHead = states.get(state);
-    //if(!newHead.resolve()) throw new AssertionError();
-    //newHead.addEngine(engine);
-    //
-    //createOrMoveBranch(branch, newHead);
+    ancestors.foreach { obj =>
+      if (!deserialize(obj).resolve())
+        throw new AssertionError()
+    }
+
+    val newHead = states.get(state)
+    if (!newHead.resolve()) throw new AssertionError()
+    newHead.addEngine(engine)
+
+    createOrMoveBranch(branch, newHead)
   }
 
   //send branch sync
@@ -317,24 +298,26 @@ class BranchManager(engine: Engine) {
    * @param callback a callback to provide the data to the caller
    */
   def sendUpdate(engine: Int, branch: String, callback: SyncCallback): Unit = {
-    //MetaState[] head = branches.get(branch);
-    //if(head == null || head[0] == null) throw new IllegalArgumentException();
-    //
-    //MetaState state;
-    //if(engine == 0) {
-    //    state = null;
-    //} else {
-    //    state = head[0];
-    //    Integer id = engine;
-    //    while(state != null && !state.engines.contains(id))
-    //        state = state.parent;
-    //    if(state == head[0]) return;
-    //
-    //    head[0].addEngine(engine);
-    //}
-    //
-    //long[] ancestors = state == null? new long[0]:new long[] {state.stateId};
-    //callback.sendUpdateCallback(this.engine.getId(), branch, serialize(head[0]), ancestors);
+    val head = _branches.get(branch)
+    if (head == null || head(0) == null)
+      throw new IllegalArgumentException()
+
+    val state =
+      if (engine == 0) {
+        null
+      } else {
+        var _state = head(0);
+        val id = engine;
+        while (_state != null && !_state.engines.contains(id))
+          _state = _state.parent
+        if (_state == head(0)) return
+
+        head(0).addEngine(engine)
+        _state
+      }
+
+    val ancestors = if (state == null) Seq[Long](0) else Seq[Long](state.stateId)
+    callback.sendUpdateCallback(this.engine.id, branch, serialize(head(0)), ancestors: _*)
   }
 
   /**
@@ -350,63 +333,56 @@ class BranchManager(engine: Engine) {
    * @param callback a callback to provide the data to the caller
    */
   def sendMissing(engine: Int, branch: String, ancestor: Long, callback: SyncCallback): Unit = {
-    //MetaState[] head = branches.get(branch);
-    //if(head == null || head[0] == null) throw new IllegalArgumentException();
-    //
-    //head[0].addEngine(engine);
-    //long headId = head[0].stateId;
-    //if(headId == ancestor) return;
-    //
-    //LinkedList<Obj> ancestors = new LinkedList<>();
-    //for(MetaState state = head[0].parent; state.stateId != ancestor; state = state.parent) {
-    //    ancestors.addFirst(serialize(state));
-    //}
-    //
-    //callback.sendMissingCallback(this.engine.getId(), branch, headId,
-    //        ancestors.toArray(new Obj[ancestors.size()]));
+    val head = _branches.get(branch)
+    if (head == null || head(0) == null) throw new IllegalArgumentException()
+
+    head(0).addEngine(engine)
+    val headId = head(0).stateId
+    if (headId == ancestor) return
+
+    var ancestors = List[Obj]()
+    var state = head(0).parent
+    while (state.stateId != ancestor) {
+      ancestors = serialize(state) :: ancestors
+      state = state.parent
+    }
+
+    callback.sendMissingCallback(this.engine.id, branch, headId, ancestors: _*)
   }
 
   //state mgmt
 
   private def deserialize(state: Obj): MetaState = {
-    //try {
-    //    PolybufInput in = new PolybufInput(engine.getConfig());
-    //    return (MetaState) in.readObject(state);
-    //} catch(PolybufException | ClassCastException ex) {
-    //    throw new IllegalArgumentException(ex);
-    //}
-    null
+    try {
+      new PolybufInput(engine.config).readObject(state).asInstanceOf[MetaState]
+    } catch {
+      case ex: PolybufException   => throw new IllegalArgumentException(ex)
+      case ex: ClassCastException => throw new IllegalArgumentException(ex)
+    }
   }
 
   private def serialize(state: MetaState): Obj = {
-    //try {
-    //    PolybufOutput out = new PolybufOutput(engine.getConfig());
-    //    return out.writeObject(state);
-    //} catch(PolybufException ex) {
-    //    throw new IllegalArgumentException(ex);
-    //}
-    null
+    try {
+      new PolybufOutput(engine.config).writeObject(state)
+    } catch {
+      case ex: PolybufException => throw new IllegalArgumentException(ex)
+    }
   }
 
-  private def put(state: State): MetaState = {
-    //Long id = state.getId();
-    //MetaState result = states.get(id);
-    //if(result == null) {
-    //    states.put(id, result = new MetaState(state));
-    //}
-    //return result;
-    null
-  }
+  private def put(state: State): MetaState =
+    states.getOrElseUpdate(state.id, new MetaState(state))
 
-  private class MetaState(stateId: Long, parentId: Long) extends PolybufSerializable {
+  private class MetaState(val stateId: Long, val parentId: Long) extends PolybufSerializable {
     private var _action: Obj = _
 
     private var _parent: MetaState = _
+    def parent = _parent
+
     private var _state: State = _
     def state = _state
 
     //set of engines known to know this meta state
-    private val engines = new HashSet[Integer]();
+    private[BranchManager] val engines = new HashSet[Integer]()
 
     /**
      * <p>
@@ -417,13 +393,13 @@ class BranchManager(engine: Engine) {
      */
     def this(state: State) = {
       this(
-        state.getId(),
-        if (state.getId() != 0) state.getParent().getId() else 0)
+        state.id,
+        if (state.id != 0) state.parent.id else 0)
 
       _state = state;
       if (stateId != 0)
-        _parent = put(state.getParent())
-      addEngine(engine.getId())
+        _parent = put(state.parent)
+      addEngine(engine.id)
     }
 
     /**
@@ -439,7 +415,7 @@ class BranchManager(engine: Engine) {
       this(
         state.getExtension(State.EXTENSION).getId(),
         state.getExtension(State.EXTENSION).getParent())
-      _action = state.getExtension(State.EXTENSION).getAction;
+      _action = state.getExtension(State.EXTENSION).getAction()
     }
 
     override def typeId: Int = State.FIELD
@@ -456,32 +432,32 @@ class BranchManager(engine: Engine) {
      *         in the underlying engine; {@code false} otherwise
      */
     def resolve(): Boolean = {
-      //if(state != null) return true;
-      //assert stateId != 0;
-      //if(parent == null) parent = states.get(parentId);
-      //if(parent == null || !parent.resolve()) return false;
-      //
-      //state = new State(engine, parent.state, stateId, action);
-      //addEngine(engine.getId());
-      //addEngine(state.getEngineId());
-      //
-      //return true;
-      true
+      if (_state != null) true
+      else {
+        assert(stateId != 0)
+        if (_parent == null) _parent = states.get(parentId)
+        if (_parent == null || !_parent.resolve()) false
+        else {
+          _state = new State(engine, parent.state, stateId, _action)
+          addEngine(engine.id)
+          addEngine(state.engineId)
+          true
+        }
+      }
     }
 
     def addEngine(id: Int): Unit = {
-      ////an assuption here is that if this state has an engine marked, all its parents will have it marked too
-      ////if the state is not resolved, i.e. not attached to its parent, then this assumption could be broken
-      ////when it is subsequently resolved, so don't allow that
-      //if(!resolve()) throw new IllegalStateException();
-      //boolean added = engines.add(id);
-      //if(added && parent != null) parent.addEngine(id);
+      //an assuption here is that if this state has an engine marked, all its parents will have it marked too
+      //if the state is not resolved, i.e. not attached to its parent, then this assumption could be broken
+      //when it is subsequently resolved, so don't allow that
+      if (!resolve()) throw new IllegalStateException()
+      if (engines.add(id) && _parent != null) _parent.addEngine(id)
     }
   }
 
   //polybuf
 
-  private def getIO(): PolybufIO[MetaState] = new IO();
+  private def getIO(): PolybufIO[MetaState] = new IO()
 
   def configure(config: PolybufConfig): Unit = config.add(getIO())
 

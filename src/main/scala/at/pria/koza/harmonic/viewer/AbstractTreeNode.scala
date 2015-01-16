@@ -6,11 +6,9 @@
 
 package at.pria.koza.harmonic.viewer
 
-import java.util.Collections._
+import scala.collection.JavaConversions
 
 import java.util.Enumeration
-import java.util.LinkedList
-import java.util.List
 
 import javax.swing.tree.TreeNode
 
@@ -22,49 +20,35 @@ import javax.swing.tree.TreeNode
  * @version V0.0 11.08.2013
  * @author SillyFreak
  */
-abstract class AbstractTreeNode[E <: TreeNode] extends TreeNode {
-  protected def getChildren(): List[E]
+abstract class AbstractTreeNode[E <: TreeNode](private[viewer] val _children: Seq[E], parent: TreeNode) extends TreeNode {
+  override def getParent(): TreeNode = parent
 
-  override def getParent(): TreeNode
-
-  protected[viewer] def getPath(): Array[Object] = {
-    val path = new LinkedList[Object]()
+  protected[viewer] def path: Array[Object] = {
+    var path = List[Object]()
     var node: TreeNode = this
     while (node != null) {
-      path.addFirst(node)
+      path = node :: path
       node = node.getParent()
     }
-    path.toArray()
+    path.toArray(implicitly)
   }
 
-  override def getChildAt(childIndex: Int): TreeNode = {
-    val list = getChildren()
-    if (list == null) throw new IndexOutOfBoundsException()
-    list.get(childIndex)
-  }
+  override def getChildAt(childIndex: Int): TreeNode =
+    if (_children == null) throw new IndexOutOfBoundsException()
+    else _children(childIndex)
 
-  override def getChildCount(): Int = {
-    val list = getChildren()
-    if (list == null) 0 else list.size()
-  }
+  override def getChildCount(): Int =
+    if (_children == null) 0 else _children.size
 
-  override def getIndex(node: TreeNode): Int = {
-    val list = getChildren()
-    if (list == null) return -1
-    return list.indexOf(node)
-  }
+  override def getIndex(node: TreeNode): Int =
+    if (_children == null) -1 else _children.indexOf(node)
 
-  override def getAllowsChildren(): Boolean = {
-    return getChildren() != null
-  }
+  override def getAllowsChildren(): Boolean =
+    _children != null
 
-  override def isLeaf(): Boolean = {
-    val list = getChildren()
-    return list == null || list.isEmpty()
-  }
+  override def isLeaf(): Boolean =
+    _children == null || _children.isEmpty
 
-  override def children(): Enumeration[E] = {
-    val list = getChildren()
-    enumeration(if (list == null) emptyList() else list)
-  }
+  override def children(): Enumeration[E] =
+    JavaConversions.asJavaEnumeration((if (_children == null) Seq.empty else _children).iterator)
 }

@@ -27,7 +27,7 @@ trait BranchListener extends EventListener {
    * @param branch the branch being created
    * @param head the initial tip of the new branch
    */
-  def branchCreated(mgr: BranchManager, branch: String, head: State): Unit
+  def branchCreated(mgr: BranchManager, branch: String, head: State): Unit = {}
 
   /**
    * <p>
@@ -39,7 +39,7 @@ trait BranchListener extends EventListener {
    * @param prevHead the previous tip of the branch
    * @param newHead the new tip of the branch
    */
-  def branchMoved(mgr: BranchManager, branch: String, prevHead: State, newHead: State): Unit
+  def branchMoved(mgr: BranchManager, branch: String, prevHead: State, newHead: State): Unit = {}
 
   /**
    * <p>
@@ -50,5 +50,5 @@ trait BranchListener extends EventListener {
    * @param branch the branch being deleted
    * @param prevHead the tip of the new branch previous to deleting it
    */
-  def branchDeleted(mgr: BranchManager, branch: String, prevHead: State): Unit
+  def branchDeleted(mgr: BranchManager, branch: String, prevHead: State): Unit = {}
 }

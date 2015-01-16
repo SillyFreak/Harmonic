@@ -49,14 +49,8 @@ object State {
  * @param id the ID assigned to this state by the engine that originally created it
  * @param action the action leading to this state
  */
-class State(engine: Engine, parent: State, id: Long, action: Obj) extends PolybufSerializable {
-  private val _engine = engine
-  private val _id = id
-  private val _parent = parent
-
-  private val _actionObj = action
+class State(val engine: Engine, val parent: State, val id: Long, private[harmonic] val actionObj: Obj) extends PolybufSerializable {
   private var _action: Action = _
-
   engine.putState(this)
 
   /**
@@ -66,7 +60,7 @@ class State(engine: Engine, parent: State, id: Long, action: Obj) extends Polybu
    *
    * @param engine the engine for which this is the root state
    */
-  private[harmonic] def this(engine: Engine) = this(engine, null, 0, null)
+  private[harmonic] def this(_engine: Engine) = this(_engine, null, 0, null)
 
   /**
    * <p>
@@ -76,37 +70,16 @@ class State(engine: Engine, parent: State, id: Long, action: Obj) extends Polybu
    * @param parent the parent state for this new state
    * @param action the action leading to this new state
    */
-  private[harmonic] def this(parent: State, action: Action) =
+  private[harmonic] def this(_parent: State, _action: Action) =
     this(
-      parent.getEngine(),
-      parent,
-      parent.getEngine().nextStateId(),
+      _parent.engine,
+      _parent,
+      _parent.engine.nextStateId(),
       try {
-        new PolybufOutput(parent.getEngine().getConfig()).writeObject(action);
+        new PolybufOutput(_parent.engine.config).writeObject(_action)
       } catch {
         case ex: PolybufException => throw new IllegalArgumentException(ex)
       })
-
-  /**
-   * <p>
-   * Returns the engine in which this state resides. This may be different from the engine which originally
-   * created the state.
-   * </p>
-   *
-   * @return the engine in which this state resides
-   */
-  def getEngine(): Engine = _engine
-
-  /**
-   * <p>
-   * Returns the unique ID assigned to this state. For the root state of any engine, this is zero. Otherwise, the
-   * upper four bytes identify the original engine that created it, the lower four bytes is a sequentially
-   * assigned number chosen by that engine.
-   * </p>
-   *
-   * @return the unique ID assigned to this state
-   */
-  def getId(): Long = _id
 
   /**
    * <p>
@@ -115,21 +88,12 @@ class State(engine: Engine, parent: State, id: Long, action: Obj) extends Polybu
    *
    * @return
    */
-  def getEngineId(): Int = (_id >> 32).toInt
-
-  /**
-   * <p>
-   * Returns this state's parent. Only the root state has {@code null} as its parent.
-   * </p>
-   *
-   * @return this state's parent
-   */
-  def getParent(): State = _parent
+  def engineId: Int = (id >> 32).toInt
 
   def apply(): Unit = {
     assert(_action == null)
     try {
-      _action = new PolybufInput(_engine.getConfig()).readObject(_actionObj).asInstanceOf[Action]
+      _action = new PolybufInput(engine.config).readObject(actionObj).asInstanceOf[Action]
     } catch {
       case ex: PolybufException => throw new AssertionError(ex)
     }
@@ -150,9 +114,7 @@ class State(engine: Engine, parent: State, id: Long, action: Obj) extends Polybu
    *
    * @return the action that led from the parent to this state
    */
-  def getAction(): Action = _action
-
-  def getActionObj(): Polybuf.Obj = _actionObj
+  def action: Action = _action
 
   override def typeId: Int = State.FIELD
 
@@ -169,8 +131,8 @@ class State(engine: Engine, parent: State, id: Long, action: Obj) extends Polybu
    * @return the nearest common predecessor state
    * @see <a href="http://twistedoakstudios.com/blog/Post3280__">Algorithm source</a>
    */
-  def getCommonPredecessor(other: State): State = {
-    if (getEngine() != other.getEngine()) throw new IllegalArgumentException()
+  def commonPredecessor(other: State): State = {
+    if (engine != other.engine) throw new IllegalArgumentException()
 
     //code taken from
     //http://twistedoakstudios.com/blog/Post3280_intersecting-linked-lists-faster
@@ -186,18 +148,18 @@ class State(engine: Engine, parent: State, id: Long, action: Obj) extends Polybu
       // advance each node progressively farther, watching for the other node
       breakable {
         for (i <- 0 to stepSize) {
-          if (node0.getId() == 0) break
+          if (node0.id == 0) break
           if (node0 == node1) break
-          node0 = node0.getParent()
+          node0 = node0.parent
           dist0 += 1
         }
       }
       stepSize *= 2
       breakable {
         for (i <- 0 to stepSize) {
-          if (node1.getId() == 0) break
+          if (node1.id == 0) break
           if (node0 == node1) break
-          node1 = node1.getParent()
+          node1 = node1.parent
           dist1 += 1
         }
       }
@@ -209,18 +171,18 @@ class State(engine: Engine, parent: State, id: Long, action: Obj) extends Polybu
     // align heads to be an equal distance from the first common node
     var r = dist1 - dist0
     while (r < 0) {
-      node0 = node0.getParent()
+      node0 = node0.parent
       r += 1
     }
     while (r > 0) {
-      node1 = node1.getParent()
+      node1 = node1.parent
       r -= 1
     }
 
     // advance heads until they meet at the first common node
     while (node0 != node1) {
-      node0 = node0.getParent()
-      node1 = node1.getParent()
+      node0 = node0.parent
+      node1 = node1.parent
     }
 
     node0
@@ -228,32 +190,30 @@ class State(engine: Engine, parent: State, id: Long, action: Obj) extends Polybu
 
   override def toString(): String = {
     val actionType =
-      if (_actionObj == null) null
-      else engine.getConfig().get(_actionObj.getTypeId()) match {
+      if (actionObj == null) null
+      else engine.config.get(actionObj.getTypeId) match {
         case Some(io) =>
           io.extension.getDescriptor().getMessageType().getName()
         case None =>
           null
       }
-    format("%s@%016X: %s", (getClass().getSimpleName(), _id, actionType))
+    format("%s@%016X: %s", (getClass().getSimpleName(), id, actionType))
   }
 }
 
 private class IO(engine: Engine) extends PolybufIO[State] {
-  override def typeId: Int = State.FIELD
-
   override def extension: GeneratedExtension[Obj, StateP] = State.EXTENSION
 
   @throws[PolybufException]
   override def serialize(out: PolybufOutput, instance: State, obj: Obj.Builder): Unit = {
     val b = StateP.newBuilder()
-    b.setId(instance.getId())
+    b.setId(instance.id)
     //handle the root state differently:
     //it has id zero, i.e. no original engine, no parent and no action
     //it's inherently different, and must be handled differently
-    if (instance.getId() != 0l) {
-      b.setParent(instance.getParent().getId())
-      b.setAction(instance.getActionObj())
+    if (instance.id != 0l) {
+      b.setParent(instance.parent.id)
+      b.setAction(instance.actionObj)
     }
 
     obj.setExtension(State.EXTENSION, b.build())
@@ -269,7 +229,4 @@ private class IO(engine: Engine) extends PolybufIO[State] {
     if (result != null) result
     else new State(engine, engine.getState(p.getParent()), id, p.getAction())
   }
-
-  @throws[PolybufException]
-  override def deserialize(in: PolybufInput, obj: Obj, instance: State): Unit = {}
 }

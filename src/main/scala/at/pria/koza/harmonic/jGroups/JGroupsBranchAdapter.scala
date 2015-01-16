@@ -34,7 +34,7 @@ class JGroupsBranchAdapter(ch: JChannel, mgr: BranchManager) extends ReceiverAda
     try {
       val src = msg.getSrc()
       val bais = new ByteArrayInputStream(msg.getRawBuffer(), msg.getOffset(), msg.getLength())
-      val m = SyncP.parseFrom(bais, mgr.getEngine().getConfig().registry)
+      val m = SyncP.parseFrom(bais, mgr.engine.config.registry)
 
       m.getType match {
         case RECEIVE_UPDATE => {

@@ -25,12 +25,10 @@ class StateTreeModel extends DefaultTreeModel(null) {
   private val nodes = new HashMap[Long, StateNode]()
   private val _root = new StateNode()
 
-  override def getRoot(): StateNode = {
-    return _root;
-  }
+  override def getRoot(): StateNode = _root
 
   def resolve(state: State): StateNode = {
-    val id = state.getId()
+    val id = state.id
     var result = nodes.get(id)
     if (result == null) {
       result = new StateNode(this, state)
@@ -39,11 +37,9 @@ class StateTreeModel extends DefaultTreeModel(null) {
     result
   }
 
-  override protected[viewer] def fireTreeNodesInserted(source: Object, path: Array[Object], childIndices: Array[Int], children: Array[Object]): Unit = {
-    super.fireTreeNodesInserted(source, path, childIndices, children);
-  }
+  override protected[viewer] def fireTreeNodesInserted(source: Object, path: Array[Object], childIndices: Array[Int], children: Array[Object]): Unit =
+    super.fireTreeNodesInserted(source, path, childIndices, children)
 
-  override protected[viewer] def fireTreeNodesChanged(source: Object, path: Array[Object], childIndices: Array[Int], children: Array[Object]): Unit = {
-    super.fireTreeNodesChanged(source, path, childIndices, children);
-  }
+  override protected[viewer] def fireTreeNodesChanged(source: Object, path: Array[Object], childIndices: Array[Int], children: Array[Object]): Unit =
+    super.fireTreeNodesChanged(source, path, childIndices, children)
 }

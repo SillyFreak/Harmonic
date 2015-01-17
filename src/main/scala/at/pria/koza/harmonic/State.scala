@@ -59,7 +59,7 @@ object State {
    * commonTail(Stream.from(2, 2),
    *            Stream.from(4, 3));    //undefined: element 4 is common, but not part of a common tail
    * commonTail(Stream.from(1, 2),
-   *            Stream.from(2, 2));    //ok, but never returns
+   *            Stream.from(2, 2));    //ok, but doesn't terminate
    * }}}
    *
    * @param as the first sequence

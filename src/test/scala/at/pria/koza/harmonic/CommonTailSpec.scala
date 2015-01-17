@@ -73,6 +73,8 @@ class CommonTailSpec extends FlatSpec with Matchers {
   it should "return the original sequence for two equal infinite sequences" in {
     val list = Stream.from(0)
 
+    //note: result check for infinite list does only work because the original
+    //stream instance is returned, and not a different equal sequence
     State.commonTail(list, list) should be(list)
   }
 
@@ -80,22 +82,28 @@ class CommonTailSpec extends FlatSpec with Matchers {
     val list1 = Stream.from(2)
     val list2 = Stream.from(0)
 
+    //note: result check for infinite list does only work because the original
+    //stream instance is returned, and not a different equal sequence
     State.commonTail(list1, list2) should be(list1)
   }
 
   it should "return the common tail for two different infinite sequences with diverging heads of same length" in {
     val tail = Stream.from(0)
-    val list1 = Stream.cons(-1, tail)
-    val list2 = Stream.cons(-2, tail)
+    val list1 = -1 #:: tail
+    val list2 = -2 #:: tail
 
+    //note: result check for infinite list does only work because the original
+    //stream instance is returned, and not a different equal sequence
     State.commonTail(list1, list2) should be(tail)
   }
 
   it should "return the common tail for two different infinite sequences with diverging heads of different lengths" in {
     val tail = Stream.from(0)
-    val list1 = Stream.cons(-5, Stream.cons(-3, Stream.cons(-1, tail)))
-    val list2 = Stream.cons(-2, tail)
+    val list1 = -5 #:: -3 #:: -1 #:: tail
+    val list2 = -2 #:: tail
 
+    //note: result check for infinite list does only work because the original
+    //stream instance is returned, and not a different equal sequence
     State.commonTail(list1, list2) should be(tail)
   }
 }

@@ -29,6 +29,10 @@ ext {
         internal: [],
     ]
     
+    optional = { dep -> libs.optional << dep; return dep }
+    provided = { dep -> libs.provided << dep; return dep }
+    internal = { dep -> libs.internal << dep; return dep }
+    
     modifyPom = { Closure modification ->
         deployers*.pom*.whenConfigured(modification)
     }

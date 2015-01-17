@@ -30,13 +30,9 @@ dependencies {
     compile 'org.scala-lang:scala-library:2.11.1'
     compile 'com.google.protobuf:protobuf-java:2.5.0'
     compile 'at.pria.koza:polybuf:0.2.0-SNAPSHOT'
-    compile 'org.jgroups:jgroups:3.2.7.Final'
+    compile optional('org.jgroups:jgroups:3.2.7.Final')
     testCompile 'org.scalatest:scalatest_2.11:2.2.1'
 }
-
-libs.optional += [
-    'org.jgroups:jgroups:3.2.7.Final',
-]
 
 buildscript {
     repositories {

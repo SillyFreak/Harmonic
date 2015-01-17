@@ -49,7 +49,7 @@ abstract class Action(engine: Engine) {
    * defined state; see `apply0()`.
    * </p>
    */
-  def apply(): Unit = {
+  private[harmonic] def apply(): Unit = {
     Action.action.withValue(this) {
       apply0()
     }
@@ -62,7 +62,7 @@ abstract class Action(engine: Engine) {
    * action.
    * </p>
    */
-  def revert(): Unit = {
+  private[harmonic] def revert(): Unit = {
     while (!_modifications.isEmpty) {
       val (m :: ms) = _modifications
       m.revert()
@@ -78,7 +78,7 @@ abstract class Action(engine: Engine) {
    *
    * @param m the `Modification` to add
    */
-  def addModification(m: Modification): Unit = {
+  private[harmonic] def addModification(m: Modification): Unit = {
     _modifications = m :: _modifications
   }
 
@@ -93,5 +93,5 @@ abstract class Action(engine: Engine) {
    * in a state where reverting this action really does revert it into the previous state.
    * </p>
    */
-  def apply0(): Unit
+  protected[this] def apply0(): Unit
 }

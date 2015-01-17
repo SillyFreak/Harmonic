@@ -30,15 +30,11 @@ import com.google.protobuf.GeneratedMessage.GeneratedExtension
  * @version V0.0 16.05.2013
  * @author SillyFreak
  */
-object State {
+object State extends IOFactory[State] {
   val FIELD = StateP.STATE_FIELD_NUMBER
   val EXTENSION = StateP.state
 
   def getIO(engine: Engine): PolybufIO[State] = new IO(engine)
-
-  def configure(config: PolybufConfig, engine: Engine): Unit = {
-    config.add(getIO(engine))
-  }
 
   /**
    * <p>

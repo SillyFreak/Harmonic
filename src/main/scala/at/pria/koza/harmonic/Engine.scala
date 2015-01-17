@@ -13,6 +13,8 @@ import java.util.EventListener
 import java.util.Random
 
 import at.pria.koza.polybuf.PolybufConfig
+import at.pria.koza.polybuf.PolybufIO
+import at.pria.koza.polybuf.PolybufSerializable
 
 /**
  * <p>
@@ -72,6 +74,10 @@ class Engine(val id: Int) {
     }
 
   val config: PolybufConfig = new PolybufConfig()
+  def addIO[T <: PolybufSerializable](io: IOFactory[T]): Unit =
+    config.add(io.getIO(this))
+  def getIO(typeID: Int): Option[PolybufIO[_ <: PolybufSerializable]] =
+    config.get(typeID)
 
   private val stateListeners = mutable.ListBuffer[StateListener]()
   private val headListeners = mutable.ListBuffer[HeadListener]()

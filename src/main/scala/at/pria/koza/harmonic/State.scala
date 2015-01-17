@@ -189,7 +189,8 @@ abstract class State(val engine: Engine, val id: Long) extends PolybufSerializab
 }
 
 class RootState(engine: Engine) extends State(engine, 0) {
-  def seq: List[State] = this :: Nil
+  val _seq = this :: Nil
+  def seq: List[State] = _seq
   def seqNoRoot: List[DerivedState] = Nil
 
   override def toString(): String = getClass().getSimpleName()
@@ -211,8 +212,10 @@ class DerivedState(val parent: State, id: Long, val actionObj: Obj) extends Stat
     _action = action
   }
 
-  def seq: List[State] = this :: parent.seq
-  def seqNoRoot: List[DerivedState] = this :: parent.seqNoRoot
+  val _seq = this :: parent.seq
+  val _seqNoRoot = this :: parent.seqNoRoot
+  def seq: List[State] = _seq
+  def seqNoRoot: List[DerivedState] = _seqNoRoot
 
   def apply(): Unit = {
     assert(_action == null)

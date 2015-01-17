@@ -19,10 +19,15 @@ import org.scalatest.Matchers
 class CommonTailSpec extends FlatSpec with Matchers {
   behavior of "commonTail"
 
-  it should "return Nil when either list is Nil" in {
-    State.commonTail(Nil, Stream.from(0)) should be(Nil)
-    State.commonTail(Stream.from(0), Nil) should be(Nil)
+  it should "return Nil when both lists are Nil" in {
     State.commonTail(Nil, Nil) should be(Nil)
+  }
+
+  it should "return Nil when either list is Nil" in {
+    val list = List(1, 2, 3, 4)
+
+    State.commonTail(Nil, list) should be(Nil)
+    State.commonTail(list, Nil) should be(Nil)
   }
 
   it should "return the original list for two equal lists" in {

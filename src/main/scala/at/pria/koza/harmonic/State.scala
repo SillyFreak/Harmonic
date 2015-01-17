@@ -45,12 +45,30 @@ object State {
    * Computes and returns the longest common tail of two `Seq`s. If two (finite) `Seq`s are otherwise separate,
    * their common tail will be `Nil`.
    * </p>
+   * <p>
+   * Note that this method checks the sequences' elements, not the actual links used. It is therefore important
+   * that the lists do not contain equal elements other than in their common tail. Consider these examples:
+   * </p>
+   *
+   * {{{
+   * commonTail("4321", "54321");      //ok: common tail is ("4321": Seq[Char])
+   * commonTail("1234", "12345");      //undefined: elements "1234" are common, but not part of a common tail
+   * commonTail("123_456", "abc_def"); //undefined: element '_' is common, but not part of a common tail
+   * commonTail(Stream.from(2),
+   *            Stream.from(4));       //ok: common tail is Stream.from(4)
+   * commonTail(Stream.from(2, 2),
+   *            Stream.from(4, 3));    //undefined: element 4 is common, but not part of a common tail
+   * commonTail(Stream.from(1, 2),
+   *            Stream.from(2, 2));    //ok, but never returns
+   * }}}
+   *
+   * @param as the first sequence
+   * @param bs the first sequence
+   * @return their common tail, or `Nil` for finite, separate sequences
    *
    * @see <a href="http://twistedoakstudios.com/blog/Post3280__">Algorithm source</a>
    */
   def commonTail[T](as: Seq[T], bs: Seq[T]): Seq[T] = {
-    if (as.isEmpty || bs.isEmpty) return Nil
-
     //code taken from
     //http://twistedoakstudios.com/blog/Post3280_intersecting-linked-lists-faster
 
@@ -60,18 +78,16 @@ object State {
       val dists = Array(0, 0)
       var stepSize = 1
 
-      breakable {
-        while (true) {
-          // advance each node progressively farther, watching for the other node
-          for (i <- 0 to 1) {
+      while (lists(0).headOption != lists(1).headOption) {
+        // advance each node progressively farther, watching for the other node
+        for (i <- 0 to 1) {
+          breakable {
             for (_ <- 1 to stepSize) {
-              if (lists(0).head equals lists(1).head) break
-              lists(i) match {
-                case Nil =>
-                  return Nil
-                case _ :: tail =>
-                  dists(i) += 1
-                  lists(i) = tail
+              if (lists(0).headOption == lists(1).headOption) break
+              else if (lists(i).isEmpty) break
+              else {
+                dists(i) += 1
+                lists(i) = lists(i).tail
               }
             }
           }
@@ -86,7 +102,8 @@ object State {
     var _bs = bs.drop(r)
 
     // advance heads until they meet at the first common node
-    while (!(_as.head equals _bs.head)) {
+    while (_as.headOption != _bs.headOption) {
+      // at this point heads are aligned, so none of the lists may be Nil without the loop breaking before this
       _as = _as.tail
       _bs = _bs.tail
     }

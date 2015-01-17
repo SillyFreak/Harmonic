@@ -36,6 +36,40 @@ object State extends IOFactory[State] {
 
   def getIO(engine: Engine): PolybufIO[State] = new IO(engine)
 
+  private class IO(engine: Engine) extends PolybufIO[State] {
+    override def extension: GeneratedExtension[Obj, StateP] = EXTENSION
+
+    @throws[PolybufException]
+    override def serialize(out: PolybufOutput, instance: State, obj: Obj.Builder): Unit = {
+      val b = StateP.newBuilder()
+      b.setId(instance.id)
+
+      instance match {
+        case root: RootState =>
+        //handle the root state differently:
+        //it has id zero, i.e. no original engine, no parent and no action
+        //it's inherently different, and must be handled differently
+        case node: DerivedState =>
+          b.setParent(node.parent.id)
+          b.setAction(node.actionObj)
+      }
+
+      obj.setExtension(extension, b.build())
+    }
+
+    @throws[PolybufException]
+    override def initialize(in: PolybufInput, obj: Obj): State = {
+      val p = obj.getExtension(extension)
+      val id = p.getId()
+      //handle states already present properly
+      val result = engine.state(id)
+
+      if (result != null) result
+      else if (id == 0) new RootState(engine)
+      else new DerivedState(engine.state(p.getParent()), id, p.getAction())
+    }
+  }
+
   /**
    * <p>
    * Computes and returns the longest common tail of two `Seq`s. For elements contained in both sequences, element
@@ -236,39 +270,5 @@ class DerivedState(val parent: State, id: Long, val actionObj: Obj) extends Stat
         case None     => null
       }
     format("%s@%016X: %s", (getClass().getSimpleName(), id, actionType))
-  }
-}
-
-private class IO(engine: Engine) extends PolybufIO[State] {
-  override def extension: GeneratedExtension[Obj, StateP] = State.EXTENSION
-
-  @throws[PolybufException]
-  override def serialize(out: PolybufOutput, instance: State, obj: Obj.Builder): Unit = {
-    val b = StateP.newBuilder()
-    b.setId(instance.id)
-
-    instance match {
-      case root: RootState =>
-      //handle the root state differently:
-      //it has id zero, i.e. no original engine, no parent and no action
-      //it's inherently different, and must be handled differently
-      case node: DerivedState =>
-        b.setParent(node.parent.id)
-        b.setAction(node.actionObj)
-    }
-
-    obj.setExtension(extension, b.build())
-  }
-
-  @throws[PolybufException]
-  override def initialize(in: PolybufInput, obj: Obj): State = {
-    val p = obj.getExtension(extension)
-    val id = p.getId()
-    //handle states already present properly
-    val result = engine.state(id)
-
-    if (result != null) result
-    else if (id == 0) new RootState(engine)
-    else new DerivedState(engine.state(p.getParent()), id, p.getAction())
   }
 }

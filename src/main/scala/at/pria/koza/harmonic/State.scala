@@ -42,24 +42,69 @@ object State {
 
   /**
    * <p>
-   * Computes and returns the longest common tail of two `Seq`s. If two (finite) `Seq`s are otherwise separate,
-   * their common tail will be `Nil`.
+   * Computes and returns the longest common tail of two `Seq`s. For elements contained in both sequences, element
+   * equality must imply link equality in these sequences, that means, if two sequences' heads are equal, their
+   * tails must be equal as well. Without this limitation, either infinite sequences could not be handled, because
+   * comparing the tails takes infinite time, or alternatively reference equality would have to be used to compare
+   * links (not elements), because one and the same link can only have one tail. The element equality limitation is
+   * the most practical and intuitive one, and thus the one used.
    * </p>
    * <p>
-   * Note that this method checks the sequences' elements, not the actual links used. It is therefore important
-   * that the lists do not contain equal elements other than in their common tail. Consider these examples:
+   * If two finite `Seq`s are otherwise separate, their common tail will be `Nil`. A finite and an infinite
+   * sequence don't have a common tail, not even `Nil`, so this method won't terminate in that case. The same holds
+   * for two infinite sequences without a common tail.
+   * </p>
+   * <p>
+   * If both sequences are infinite, they may not end in the same circle. Different circles, or not ending in a
+   * circle, are permissible, as long as the equality constraint holds, but will then lead to non-termination.
+   * Consider two sequences `a (c d)` and `b (d c)`. They end in the same circle, but the head of their longest
+   * common tail is not defined. For sequences such as `a c (d e)` and `b c (d e)`, the longest common tail is
+   * unambiguous, but can't be reliably computed with the used algorithm.
    * </p>
    *
    * {{{
-   * commonTail("4321", "54321");      //ok: common tail is ("4321": Seq[Char])
-   * commonTail("1234", "12345");      //undefined: elements "1234" are common, but not part of a common tail
-   * commonTail("123_456", "abc_def"); //undefined: element '_' is common, but not part of a common tail
-   * commonTail(Stream.from(2),
-   *            Stream.from(4));       //ok: common tail is Stream.from(4)
-   * commonTail(Stream.from(2, 2),
-   *            Stream.from(4, 3));    //undefined: element 4 is common, but not part of a common tail
-   * commonTail(Stream.from(1, 2),
-   *            Stream.from(2, 2));    //ok, but doesn't terminate
+   * //ok: common tail is "321"
+   * commonTail("321", "4321")
+   *
+   * //undefined: element '1' has tails Nil and "234" at second
+   * commonTail("1", "1234")
+   *
+   * //undefined: element '_' has tails "34" and "cd" at different occurrences
+   * commonTail("12_34", "ab_cd")
+   *
+   * //ok: element '0' has tails "01" and "1" at different occurrences, but does not appear in the second list
+   * //common tail is "1"
+   * commonTail("001", "1")
+   *
+   * //undefined: element '1' appears in both sequences, but has tails "001" and Nil at different occurrences
+   * commonTail("1001", "1")
+   *
+   * //ok: common tail is Stream.from(2)
+   * commonTail(Stream.from(0), Stream.from(2))
+   *
+   * //undefined: element 0 has tails Stream.from(2, 2) and Stream.from(3, 3) at different occurrences
+   * commonTail(Stream.from(0, 2), Stream.from(0, 3))
+   *
+   * //ok, but no common tail: doesn't terminate
+   * commonTail(Nil, Stream.from(0));
+   *
+   * //ok, but no common tail: doesn't terminate
+   * commonTail(Stream.from(1, 2), Stream.from(2, 2));
+   *
+   * //ok, one of the sequences ends in a circle. no common tail: doesn't terminate
+   * commonTail(Stream.continually(0), Nil)
+   *
+   * //ok, both sequences end in different circles. no common tail: doesn't terminate
+   * commonTail(Stream.continually(0), Stream.continually(1))
+   *
+   * //undefined: both sequences end in the same circle
+   * commonTail(Stream.continually(0), Stream.continually(0))
+   *
+   * //the sequence 0, 1, 0, 1, ...
+   * val alternate = Stream.continually(List(0, 1)).flatten
+   *
+   * //undefined: both sequences end in the same circle
+   * commonTail(alternate, alternate.drop(1))
    * }}}
    *
    * @param as the first sequence

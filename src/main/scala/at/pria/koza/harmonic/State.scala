@@ -257,12 +257,12 @@ private class IO(engine: Engine) extends PolybufIO[State] {
         b.setAction(node.actionObj)
     }
 
-    obj.setExtension(State.EXTENSION, b.build())
+    obj.setExtension(extension, b.build())
   }
 
   @throws[PolybufException]
   override def initialize(in: PolybufInput, obj: Obj): State = {
-    val p = obj.getExtension(State.EXTENSION)
+    val p = obj.getExtension(extension)
     val id = p.getId()
     //handle states already present properly
     val result = engine.state(id)

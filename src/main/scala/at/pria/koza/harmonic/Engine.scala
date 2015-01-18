@@ -55,11 +55,10 @@ object Engine {
  * @param id the engine's ID.
  */
 class Engine(val id: Int) {
-  private var _entities = immutable.Map[Int, Entity]()
-  def entities: immutable.Map[Int, Entity] = _entities
+  private val entities = mutable.Map[Int, Entity]()
   def entity(id: Int): Entity =
     //TODO change interface
-    _entities.get(id) match {
+    entities.get(id) match {
       case Some(e) => e
       case None    => null
     }
@@ -200,13 +199,13 @@ class Engine(val id: Int) {
     protected[this] override def apply0(): Unit = {
       val id = _nextEntityId
       _nextEntityId += 1
-      if (_entities.contains(id)) throw new IllegalStateException()
+      if (entities.contains(id)) throw new IllegalStateException()
       entity.engine(Engine.this, id)
-      _entities = _entities.updated(id, entity)
+      entities(id) = entity
     }
 
     override def revert(): Unit = {
-      _entities = _entities.filterKeys { _ != entity.id }
+      entities -= entity.id
       entity.engine(null, -1)
       _nextEntityId -= 1
     }

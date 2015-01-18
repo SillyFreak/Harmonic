@@ -199,6 +199,7 @@ abstract class State(val engine: Engine, val id: Long) extends PolybufSerializab
   val seq: List[State]
   val seqNoRoot: List[DerivedState]
 
+  def parent: State
   def engineId: Int = (id >> 32).toInt
 
   /**
@@ -224,6 +225,8 @@ abstract class State(val engine: Engine, val id: Long) extends PolybufSerializab
 class RootState(engine: Engine) extends State(engine, 0) {
   override val seq: List[State] = this :: Nil
   override val seqNoRoot: List[DerivedState] = Nil
+
+  def parent: State = throw new NoSuchElementException()
 
   override def toString(): String = getClass().getSimpleName()
 }

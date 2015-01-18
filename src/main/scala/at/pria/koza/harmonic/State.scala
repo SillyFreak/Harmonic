@@ -62,13 +62,12 @@ object State extends IOFactory[State] {
       val p = obj.getExtension(extension)
       val id = p.getId()
       //handle states already present properly
-      try {
-        engine.state(id)
-      } catch {
-        case ex: NoSuchElementException =>
+      engine.state(id) match {
+        case Some(e) => e
+        case None =>
           if (id == 0)
             throw new AssertionError("engine has no root state")
-          new DerivedState(engine.state(p.getParent()), id, p.getAction())
+          new DerivedState(engine.state(p.getParent()).get, id, p.getAction())
       }
     }
   }

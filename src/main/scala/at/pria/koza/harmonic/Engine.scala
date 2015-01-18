@@ -56,11 +56,11 @@ object Engine {
  */
 class Engine(val id: Int) {
   private val entities = mutable.Map[Int, Entity]()
-  def entity(id: Int): Entity = entities(id)
+  def entity(id: Int): Option[Entity] = entities.get(id)
 
   private var _states = immutable.Map[Long, State]()
   def states: immutable.Map[Long, State] = _states
-  def state(id: Long): State = _states(id)
+  def state(id: Long): Option[State] = _states.get(id)
 
   val config: PolybufConfig = new PolybufConfig()
   def addIO[T <: PolybufSerializable](io: IOFactory[T]): Unit =

@@ -93,7 +93,7 @@ class BranchManager(val engine: Engine) {
   }
 
   //put the root
-  createBranch(_currentBranch, engine.state(0l))
+  createBranch(_currentBranch, engine.state(0l).get)
 
   //ctors & misc
 

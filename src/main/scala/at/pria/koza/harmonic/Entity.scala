@@ -22,6 +22,9 @@ trait Entity extends Serializable {
   private var _engine: Engine = _
   private var _id: Int = _
 
+  protected[this] def init(engine: Engine): Unit =
+    if (_engine == null) engine.putEntity(this)
+
   /**
    * <p>
    * Sets the engine this entity belongs to, along with its assigned ID
@@ -30,7 +33,7 @@ trait Entity extends Serializable {
    * @param engine the engine this entity belongs to
    * @param id the ID assigned to this entity within its engine
    */
-  def engine(engine: Engine, id: Int): Unit = {
+  private[harmonic] def engine(engine: Engine, id: Int): Unit = {
     _engine = engine
     _id = id
   }

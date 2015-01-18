@@ -29,6 +29,7 @@ import at.pria.koza.harmonic.StateListener
  * @version V0.0 11.08.2013
  * @author SillyFreak
  */
+@SerialVersionUID(1)
 class HarmonicViewer extends JPanel(new BorderLayout()) {
   private val listener = new Listener()
   private val states = new StateTreeModel()

@@ -20,6 +20,7 @@ import at.pria.koza.harmonic.State
  * @version V0.0 11.08.2013
  * @author SillyFreak
  */
+@SerialVersionUID(1)
 class StateTreeModel extends DefaultTreeModel(new StateNode()) {
   private val nodes = mutable.Map[Long, StateNode]()
 

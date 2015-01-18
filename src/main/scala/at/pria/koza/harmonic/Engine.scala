@@ -137,21 +137,25 @@ class Engine(val id: Int) {
     val pred = _head.commonPredecessor(head)
 
     //roll back to pred
-    var current = _head
-    while (current != pred) {
-      current.asInstanceOf[DerivedState].revert()
-      current = current.asInstanceOf[DerivedState].parent
+    {
+      var current = _head
+      while (current != pred) {
+        current.asInstanceOf[DerivedState].revert()
+        current = current.parent
+      }
     }
 
     //move forward to new head
-    var states = immutable.List[State]()
-    current = head
-    while (current != pred) {
-      states = current :: states
-      current = current.asInstanceOf[DerivedState].parent
-    }
-    states.foreach {
-      _.asInstanceOf[DerivedState].apply()
+    {
+      var states = immutable.List[State]()
+      var current = head
+      while (current != pred) {
+        states = current :: states
+        current = current.parent
+      }
+      states.foreach {
+        _.asInstanceOf[DerivedState].apply()
+      }
     }
 
     //set new head

@@ -194,7 +194,7 @@ class Engine(val id: Int) {
     fireStateAdded(state)
   }
 
-  override def toString(): String = format("%s@%08X", (getClass().getSimpleName(), id))
+  override def toString(): String = "%s@%08X".format(getClass().getSimpleName(), id)
 
   private class RegisterEntity(entity: Entity) extends Modification {
     protected[this] override def apply0(): Unit = {

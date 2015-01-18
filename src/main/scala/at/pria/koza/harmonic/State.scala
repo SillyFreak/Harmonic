@@ -269,6 +269,6 @@ class DerivedState(val parent: State, id: Long, val actionObj: Obj) extends Stat
         case Some(io) => io.extension.getDescriptor().getMessageType().getName()
         case None     => null
       }
-    format("%s@%016X: %s", (getClass().getSimpleName(), id, actionType))
+    "%s@%016X: %s".format(getClass().getSimpleName(), id, actionType)
   }
 }

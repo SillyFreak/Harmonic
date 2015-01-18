@@ -192,12 +192,11 @@ class BranchManager(val engine: Engine) {
   }
 
   private def createOrMoveBranch(branch: String, newHead: MetaState): MetaState = {
-    var tip = _branches.get(branch)
-    if (tip == null) {
-      tip = new Array[MetaState](1)
+    val tip = _branches.getOrElseUpdate(branch, {
+      val tip = new Array[MetaState](1)
       tip(0) = newHead
-      _branches.put(branch, tip)
-    }
+      tip
+    })
     val oldHead = tip(0)
     tip(0) = newHead
 

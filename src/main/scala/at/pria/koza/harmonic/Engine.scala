@@ -32,7 +32,7 @@ object Engine {
     var result: Int = 0
     do {
       result = random.nextInt()
-    } while (result != 0)
+    } while (result == 0)
     result
   }
 }

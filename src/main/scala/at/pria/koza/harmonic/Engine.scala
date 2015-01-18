@@ -197,7 +197,7 @@ class Engine(val id: Int) {
   override def toString(): String = format("%s@%08X", (getClass().getSimpleName(), id))
 
   private class RegisterEntity(entity: Entity) extends Modification {
-    private[harmonic] override def apply0(): Unit = {
+    protected[this] override def apply0(): Unit = {
       val id = _nextEntityId
       _nextEntityId += 1
       if (_entities.contains(id)) throw new IllegalStateException()
@@ -205,7 +205,7 @@ class Engine(val id: Int) {
       _entities = _entities.updated(id, entity)
     }
 
-    private[harmonic] override def revert(): Unit = {
+    override def revert(): Unit = {
       _entities = _entities.filterKeys { _ != entity.id }
       entity.engine(null, -1)
       _nextEntityId -= 1

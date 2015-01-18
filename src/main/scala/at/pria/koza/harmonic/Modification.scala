@@ -46,7 +46,7 @@ abstract class Modification {
    *
    * @see Action#get()
    */
-  private[harmonic] def addToAction(): Unit = {
+  protected[this] def addToAction(): Unit = {
     Action.value.addModification(this)
   }
 
@@ -63,7 +63,7 @@ abstract class Modification {
    * this method must ensure before re-throwing the exception that the engine is in its previous state.
    * </p>
    */
-  private[harmonic] def apply0(): Unit
+  protected[this] def apply0(): Unit
 
   /**
    * <p>
@@ -72,5 +72,5 @@ abstract class Modification {
    * was after applying this modification.
    * </p>
    */
-  private[harmonic] def revert(): Unit
+  def revert(): Unit
 }

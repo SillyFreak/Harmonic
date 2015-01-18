@@ -193,8 +193,8 @@ abstract class State(val engine: Engine, val id: Long) extends PolybufSerializab
   //PolybufSerializable
   override def typeId: Int = State.FIELD
 
-  def seq: List[State]
-  def seqNoRoot: List[DerivedState]
+  val seq: List[State]
+  val seqNoRoot: List[DerivedState]
 
   def engineId: Int = (id >> 32).toInt
 
@@ -219,9 +219,8 @@ abstract class State(val engine: Engine, val id: Long) extends PolybufSerializab
 }
 
 class RootState(engine: Engine) extends State(engine, 0) {
-  val _seq = this :: Nil
-  def seq: List[State] = _seq
-  def seqNoRoot: List[DerivedState] = Nil
+  override val seq: List[State] = this :: Nil
+  override val seqNoRoot: List[DerivedState] = Nil
 
   override def toString(): String = getClass().getSimpleName()
 }
@@ -242,10 +241,8 @@ class DerivedState(val parent: State, id: Long, val actionObj: Obj) extends Stat
     _action = action
   }
 
-  val _seq = this :: parent.seq
-  val _seqNoRoot = this :: parent.seqNoRoot
-  def seq: List[State] = _seq
-  def seqNoRoot: List[DerivedState] = _seqNoRoot
+  override val seq: List[State] = this :: parent.seq
+  override val seqNoRoot: List[DerivedState] = this :: parent.seqNoRoot
 
   def apply(): Unit = {
     assert(_action == null)

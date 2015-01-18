@@ -238,7 +238,6 @@ class DerivedState(val parent: State, id: Long, val actionObj: Obj) extends Stat
       } catch {
         case ex: PolybufException => throw new IllegalArgumentException(ex)
       })
-    _action = action
   }
 
   override val seq: List[State] = this :: parent.seq

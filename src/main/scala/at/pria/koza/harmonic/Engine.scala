@@ -201,13 +201,13 @@ class Engine(val id: Int) {
       val id = _nextEntityId
       _nextEntityId += 1
       if (_entities.contains(id)) throw new IllegalStateException()
-      entity.setEngine(Engine.this, id)
+      entity.engine(Engine.this, id)
       _entities = _entities.updated(id, entity)
     }
 
     private[harmonic] override def revert(): Unit = {
       _entities = _entities.filterKeys { _ != entity.id }
-      entity.setEngine(null, -1)
+      entity.engine(null, -1)
       _nextEntityId -= 1
     }
   }

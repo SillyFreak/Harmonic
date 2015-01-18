@@ -19,6 +19,9 @@ import java.io.Serializable
  * @author SillyFreak
  */
 trait Entity extends Serializable {
+  private var _engine: Engine = _
+  private var _id: Int = _
+
   /**
    * <p>
    * Sets the engine this entity belongs to, along with its assigned ID
@@ -27,7 +30,10 @@ trait Entity extends Serializable {
    * @param engine the engine this entity belongs to
    * @param id the ID assigned to this entity within its engine
    */
-  def setEngine(engine: Engine, id: Int): Unit
+  def engine(engine: Engine, id: Int): Unit = {
+    _engine = engine
+    _id = id
+  }
 
   /**
    * <p>
@@ -36,7 +42,7 @@ trait Entity extends Serializable {
    *
    * @return the engine to which this entity belongs
    */
-  def engine: Engine
+  def engine: Engine = _engine
 
   /**
    * <p>
@@ -45,5 +51,5 @@ trait Entity extends Serializable {
    *
    * @return this entity's id
    */
-  def id: Int
+  def id: Int = _id
 }

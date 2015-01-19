@@ -177,9 +177,9 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
       }
     }
 
-  private val states = new mutable.HashMap[Long, MetaState]()
+  private val states = mutable.Map[Long, MetaState]()
 
-  private val branchListeners = new mutable.ListBuffer[BranchListener]()
+  private val branchListeners = mutable.ListBuffer[BranchListener]()
 
   private var _currentBranch = BranchManager.BRANCH_DEFAULT
   def currentBranch = _currentBranch

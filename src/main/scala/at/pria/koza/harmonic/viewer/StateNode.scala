@@ -58,15 +58,16 @@ class StateNode(val state: State, parent: StateNode, source: StateTreeModel) ext
   override def toString(): String = {
     if (state == null) return "<root>"
     val sb = new StringBuilder
-    val it = labels.iterator
-    while (it.hasNext) {
-      val lbl = it.next()
-      if (lbl.startsWith("branch:")) sb += '[' ++= lbl.substring(7) += ']'
-      else sb ++= lbl
-      sb += ' '
+    sb ++=
+      labels.map { lbl =>
+        if (lbl.startsWith("branch:")) '[' + lbl.substring(7) + ']'
+        else lbl
+      }.mkString("{", ", ", "} ")
+
+    sb ++= {
+      if (state.id == 0l) state.engine.toString()
+      else state.toString()
     }
-    if (state.id == 0l) sb ++= state.engine.toString()
-    else sb ++= state.toString()
 
     sb.toString()
   }

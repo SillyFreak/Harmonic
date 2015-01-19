@@ -243,7 +243,8 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
     fire(branchListeners) { _.branchCreated(mgr, branch, head) }
 
   private[harmonic] def fireBranchMoved(mgr: BranchManager, branch: String, prevHead: State, newHead: State): Unit =
-    fire(branchListeners) { _.branchMoved(mgr, branch, prevHead, newHead) }
+    if (prevHead != newHead)
+      fire(branchListeners) { _.branchMoved(mgr, branch, prevHead, newHead) }
 
   private[harmonic] def fireBranchDeleted(mgr: BranchManager, branch: String, prevHead: State): Unit =
     fire(branchListeners) { _.branchDeleted(mgr, branch, prevHead) }

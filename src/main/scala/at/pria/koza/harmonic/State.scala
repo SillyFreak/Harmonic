@@ -189,7 +189,7 @@ object State extends IOFactory[State] {
   }
 }
 
-abstract class State(val engine: Engine, val id: Long) extends PolybufSerializable {
+sealed abstract class State(val engine: Engine, val id: Long) extends PolybufSerializable {
   engine.putState(this)
 
   //PolybufSerializable

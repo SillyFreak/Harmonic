@@ -77,6 +77,7 @@ object BranchManager {
  * </p>
  */
 class BranchManager(val engine: Engine) {
+  //TODO java collections
   private val _branches = new HashMap[String, Array[MetaState]]()
   val branches = unmodifiableMap[String, Array[MetaState]](_branches).keySet()
 

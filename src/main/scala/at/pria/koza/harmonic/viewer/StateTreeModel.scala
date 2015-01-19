@@ -8,9 +8,9 @@ package at.pria.koza.harmonic.viewer
 
 import scala.collection.mutable
 
-import javax.swing.tree.DefaultTreeModel
-
 import at.pria.koza.harmonic.State
+
+import javax.swing.tree.DefaultTreeModel
 
 /**
  * <p>
@@ -22,9 +22,9 @@ import at.pria.koza.harmonic.State
  */
 @SerialVersionUID(1)
 class StateTreeModel extends DefaultTreeModel(new StateNode()) {
-  private val nodes = mutable.Map[Long, StateNode]()
-
   override def getRoot(): StateNode = root.asInstanceOf[StateNode]
+
+  private val nodes = mutable.Map[Long, StateNode]()
 
   def resolve(state: State): StateNode =
     nodes.getOrElseUpdate(state.id, new StateNode(this, state))

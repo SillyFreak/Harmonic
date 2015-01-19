@@ -55,4 +55,6 @@ trait Entity extends Serializable {
    * @return this entity's id
    */
   def id: Int = _id
+
+  override def toString(): String = "%s@%08X".format(getClass().getSimpleName(), id)
 }

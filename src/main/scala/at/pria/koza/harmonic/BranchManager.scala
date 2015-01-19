@@ -6,16 +6,10 @@
 
 package at.pria.koza.harmonic
 
-import scala.collection.JavaConversions._
-
-import java.util.Collections._
-import java.util.ArrayList
-import java.util.HashMap
-import java.util.HashSet
+import scala.collection.{ mutable, immutable }
 
 import at.pria.koza.harmonic.BranchManager.SyncCallback
 import at.pria.koza.harmonic.BranchManager.MetaState
-import at.pria.koza.polybuf.PolybufConfig
 import at.pria.koza.polybuf.PolybufException
 import at.pria.koza.polybuf.PolybufIO
 import at.pria.koza.polybuf.PolybufInput
@@ -24,6 +18,8 @@ import at.pria.koza.polybuf.PolybufSerializable
 import at.pria.koza.polybuf.proto.Polybuf.Obj
 
 import com.google.protobuf.GeneratedMessage.GeneratedExtension
+
+import java.util.EventListener
 
 /**
  * <p>
@@ -81,7 +77,7 @@ object BranchManager {
     def state = _state
 
     //set of engines known to know this meta state
-    private[BranchManager] val engines = new HashSet[Integer]()
+    private[BranchManager] val engines = new mutable.HashSet[Int]()
 
     /**
      * <p>
@@ -141,7 +137,12 @@ object BranchManager {
       if (_state != null) true
       else {
         assert(stateId != 0)
-        if (_parent == null) _parent = mgr.states.get(parentId)
+        if (_parent == null) {
+          _parent = mgr.states.get(parentId) match {
+            case Some(state) => state
+            case None        => null
+          }
+        }
         if (_parent == null || !_parent.resolve()) false
         else {
           _state = new DerivedState(parent.state, stateId, _action)
@@ -168,20 +169,28 @@ object BranchManager {
  * </p>
  */
 class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
-  //TODO java collections
-  private val _branches = new HashMap[String, Array[MetaState]]()
-  val branches = unmodifiableMap[String, Array[MetaState]](_branches).keySet()
+  private val branches = new mutable.HashMap[String, Array[MetaState]]()
+  def branchIterator: Iterator[(String, MetaState)] =
+    branches.iterator.map {
+      _ match {
+        case (branch, Array(head)) => (branch, head)
+      }
+    }
 
-  private val states = new HashMap[Long, MetaState]()
-  private val branchListeners = new ArrayList[BranchListener]()
+  private val states = new mutable.HashMap[Long, MetaState]()
+
+  private val branchListeners = new mutable.ListBuffer[BranchListener]()
 
   private var _currentBranch = BranchManager.BRANCH_DEFAULT
   def currentBranch = _currentBranch
 
   def currentBranch(branch: String): Unit = {
-    val tip = branchTip(branch);
-    engine.setHead(tip);
-    _currentBranch = branch;
+    branchTip(branch) match {
+      case Some(tip) =>
+        engine.setHead(tip)
+        _currentBranch = branch
+      case None => throw new IllegalArgumentException("can't switch to nonexistant branch")
+    }
   }
 
   //put the root
@@ -222,77 +231,54 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
 
   //listeners
 
-  def addBranchListener(l: BranchListener): Unit = branchListeners.add(l)
+  def addBranchListener(l: BranchListener): Unit = branchListeners += l
+  def removeBranchListener(l: BranchListener): Unit = branchListeners -= l
 
-  def removeBranchListener(l: BranchListener): Unit = branchListeners.remove(l)
+  private[harmonic] def fire[T <: EventListener, U](listeners: Seq[T])(action: T => U): Unit =
+    listeners.synchronized { listeners.reverseIterator.foreach(action) }
 
-  private[harmonic] def fireBranchCreated(mgr: BranchManager, branch: String, head: State): Unit = {
-    branchListeners.synchronized {
-      val it = branchListeners.listIterator(branchListeners.size())
-      while (it.hasPrevious()) {
-        it.previous().branchCreated(mgr, branch, head)
-      }
-    }
-  }
+  private[harmonic] def fireBranchCreated(mgr: BranchManager, branch: String, head: State): Unit =
+    fire(branchListeners) { _.branchCreated(mgr, branch, head) }
 
-  private[harmonic] def fireBranchMoved(mgr: BranchManager, branch: String, prevHead: State, newHead: State): Unit = {
-    branchListeners.synchronized {
-      val it = branchListeners.listIterator(branchListeners.size())
-      while (it.hasPrevious()) {
-        it.previous().branchMoved(mgr, branch, prevHead, newHead)
-      }
-    }
-  }
+  private[harmonic] def fireBranchMoved(mgr: BranchManager, branch: String, prevHead: State, newHead: State): Unit =
+    fire(branchListeners) { _.branchMoved(mgr, branch, prevHead, newHead) }
 
-  private[harmonic] def fireBranchDeleted(mgr: BranchManager, branch: String, prevHead: State): Unit = {
-    branchListeners.synchronized {
-      val it = branchListeners.listIterator(branchListeners.size())
-      while (it.hasPrevious()) {
-        it.previous().branchDeleted(mgr, branch, prevHead)
-      }
-    }
-  }
+  private[harmonic] def fireBranchDeleted(mgr: BranchManager, branch: String, prevHead: State): Unit =
+    fire(branchListeners) { _.branchDeleted(mgr, branch, prevHead) }
 
   //branch mgmt
 
   def createBranchHere(branch: String): Unit =
-    createBranch(branch, branchTip(currentBranch))
+    createBranch(branch, branchTip(currentBranch).get)
 
   def createBranch(branch: String, state: State): Unit = {
-    if (state.engine != engine) throw new IllegalArgumentException()
-    if (_branches.containsKey(branch)) throw new IllegalArgumentException()
+    if (state.engine != engine) throw new IllegalArgumentException("state is from another engine")
+    if (branches.contains(branch)) throw new IllegalArgumentException("branch already exists")
     createOrMoveBranch(branch, put(state))
   }
 
   def deleteBranch(branch: String): Unit = {
-    if (_currentBranch.equals(branch)) throw new IllegalArgumentException()
-    val head = _branches.remove(branch)
-    if (head == null) throw new IllegalArgumentException()
-    fireBranchDeleted(this, branch, head(0).state)
+    if (_currentBranch == branch) throw new IllegalArgumentException("can't delete curent branch")
+    branches.remove(branch) match {
+      case Some(Array(head)) => fireBranchDeleted(this, branch, head.state)
+      case None              => throw new IllegalArgumentException("branch does not exist")
+    }
   }
 
-  def branchTip(branch: String): State = {
-    val tip = _branches.get(branch)
-    if (tip == null) throw new IllegalArgumentException()
-    tip(0).state
-  }
+  def branchTip(branch: String): Option[State] = branches.get(branch).map { _(0).state }
 
   def branchTip(branch: String, newHead: State): State = {
-    if (newHead.engine != engine) throw new IllegalArgumentException()
-    if (!_branches.containsKey(branch)) throw new IllegalArgumentException()
+    if (newHead.engine != engine) throw new IllegalArgumentException("newHead is from another engine")
+    if (!branches.contains(branch)) throw new IllegalArgumentException("branch does not exist")
     createOrMoveBranch(branch, put(newHead)).state
   }
 
   private def createOrMoveBranch(branch: String, newHead: MetaState): MetaState = {
-    val tip = _branches.getOrElseUpdate(branch, {
-      val tip = new Array[MetaState](1)
-      tip(0) = newHead
-      tip
-    })
+    val tip = branches.getOrElseUpdate(branch, Array[MetaState](null))
     val oldHead = tip(0)
     tip(0) = newHead
 
-    if (_currentBranch.equals(branch)) engine.setHead(tip(0).state)
+    if (_currentBranch.equals(branch)) engine.setHead(newHead.state)
     if (oldHead == null) fireBranchCreated(this, branch, newHead.state)
     else fireBranchMoved(this, branch, oldHead.state, newHead.state)
 
@@ -300,8 +286,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   }
 
   def execute[T <: Action](action: T): T = {
-    val state = new DerivedState(branchTip(_currentBranch), action)
-    engine.setHead(state)
+    val state = new DerivedState(branchTip(_currentBranch).get, action)
     createOrMoveBranch(_currentBranch, put(state))
     action
   }
@@ -338,7 +323,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
 
     } else {
       //we need additional states
-      val l = ancestors.find { states.containsKey(_) } match {
+      val l = ancestors.find { states.contains(_) } match {
         case Some(l) => l
         case None    => 0l
       }
@@ -368,7 +353,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
         throw new AssertionError()
     }
 
-    val newHead = states.get(state)
+    val newHead = states.get(state).get
     if (!newHead.resolve()) throw new AssertionError()
     newHead.addEngine(engine)
 
@@ -389,26 +374,27 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
    * @param callback a callback to provide the data to the caller
    */
   def sendUpdate(engine: Int, branch: String, callback: SyncCallback): Unit = {
-    val head = _branches.get(branch)
-    if (head == null || head(0) == null)
-      throw new IllegalArgumentException()
-
+    val head =
+      branches.get(branch) match {
+        case Some(Array(null)) => throw new IllegalArgumentException() //TODO can this even happen?
+        case Some(Array(head)) => head
+        case None              => throw new IllegalArgumentException("branch does not exist")
+      }
     val state =
       if (engine == 0) {
         null
       } else {
-        var _state = head(0);
-        val id = engine;
-        while (_state != null && !_state.engines.contains(id))
+        var _state = head
+        while (_state != null && !_state.engines.contains(engine))
           _state = _state.parent
-        if (_state == head(0)) return
+        if (_state == head) return
 
-        head(0).addEngine(engine)
+        head.addEngine(engine)
         _state
       }
 
     val ancestors = if (state == null) Seq[Long](0) else Seq[Long](state.stateId)
-    callback.sendUpdateCallback(this.engine.id, branch, serialize(head(0)), ancestors: _*)
+    callback.sendUpdateCallback(this.engine.id, branch, serialize(head), ancestors: _*)
   }
 
   /**
@@ -424,15 +410,19 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
    * @param callback a callback to provide the data to the caller
    */
   def sendMissing(engine: Int, branch: String, ancestor: Long, callback: SyncCallback): Unit = {
-    val head = _branches.get(branch)
-    if (head == null || head(0) == null) throw new IllegalArgumentException()
+    val head =
+      branches.get(branch) match {
+        case Some(Array(null)) => throw new IllegalArgumentException() //TODO can this even happen?
+        case Some(Array(head)) => head
+        case None              => throw new IllegalArgumentException("branch does not exist")
+      }
 
-    head(0).addEngine(engine)
-    val headId = head(0).stateId
+    head.addEngine(engine)
+    val headId = head.stateId
     if (headId == ancestor) return
 
     var ancestors = List[Obj]()
-    var state = head(0).parent
+    var state = head.parent
     while (state.stateId != ancestor) {
       ancestors = serialize(state) :: ancestors
       state = state.parent
@@ -481,12 +471,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
       val p = obj.getExtension(State.EXTENSION)
       val id = p.getId()
       //handle states already present properly
-      var result = states.get(id)
-      if (result == null) {
-        result = new MetaState(BranchManager.this, obj)
-        states.put(id, result)
-      }
-      result
+      states.getOrElseUpdate(id, new MetaState(BranchManager.this, obj))
     }
 
     @throws[PolybufException]

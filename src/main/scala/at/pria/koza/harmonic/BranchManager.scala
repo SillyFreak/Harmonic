@@ -186,11 +186,11 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   private var _currentBranch = BranchManager.BRANCH_DEFAULT
   def currentBranch = _currentBranch
 
-  def currentBranch(branch: String): Unit = {
-    branchTip(branch) match {
+  def currentBranch(name: String): Unit = {
+    branchTip(name) match {
       case Some(tip) =>
         engine.setHead(tip)
-        _currentBranch = branch
+        _currentBranch = name
       case None => throw new IllegalArgumentException("can't switch to nonexistant branch")
     }
   }
@@ -250,39 +250,39 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
 
   //branch mgmt
 
-  def createBranchHere(branch: String): Unit =
-    createBranch(branch, branchTip(currentBranch).get)
+  def createBranchHere(name: String): Unit =
+    createBranch(name, branchTip(currentBranch).get)
 
-  def createBranch(branch: String, state: State): Unit = {
+  def createBranch(name: String, state: State): Unit = {
     if (state.engine != engine) throw new IllegalArgumentException("state is from another engine")
-    if (branches.contains(branch)) throw new IllegalArgumentException("branch already exists")
-    createOrMoveBranch(branch, put(state))
+    if (branches.contains(name)) throw new IllegalArgumentException("branch already exists")
+    createOrMoveBranch(name, put(state))
   }
 
-  def deleteBranch(branch: String): Unit = {
-    if (_currentBranch == branch) throw new IllegalArgumentException("can't delete curent branch")
-    branches.remove(branch) match {
-      case Some(head) => fireBranchDeleted(this, branch, head.head.state)
+  def deleteBranch(name: String): Unit = {
+    if (_currentBranch == name) throw new IllegalArgumentException("can't delete curent branch")
+    branches.remove(name) match {
+      case Some(head) => fireBranchDeleted(this, name, head.head.state)
       case None       => throw new IllegalArgumentException("branch does not exist")
     }
   }
 
-  def branchTip(branch: String): Option[State] = branches.get(branch).map { _.head.state }
+  def branchTip(name: String): Option[State] = branches.get(name).map { _.head.state }
 
-  def branchTip(branch: String, newHead: State): State = {
+  def branchTip(name: String, newHead: State): State = {
     if (newHead.engine != engine) throw new IllegalArgumentException("newHead is from another engine")
-    if (!branches.contains(branch)) throw new IllegalArgumentException("branch does not exist")
-    createOrMoveBranch(branch, put(newHead)).state
+    if (!branches.contains(name)) throw new IllegalArgumentException("branch does not exist")
+    createOrMoveBranch(name, put(newHead)).state
   }
 
-  private def createOrMoveBranch(branch: String, newHead: MetaState): MetaState = {
-    val tip = branches.getOrElseUpdate(branch, new Branch(branch))
+  private def createOrMoveBranch(name: String, newHead: MetaState): MetaState = {
+    val tip = branches.getOrElseUpdate(name, new Branch(name))
     val oldHead = tip.head
     tip.head(newHead)
 
-    if (_currentBranch.equals(branch)) engine.setHead(newHead.state)
-    if (oldHead == null) fireBranchCreated(this, branch, newHead.state)
-    else fireBranchMoved(this, branch, oldHead.state, newHead.state)
+    if (_currentBranch.equals(name)) engine.setHead(newHead.state)
+    if (oldHead == null) fireBranchCreated(this, name, newHead.state)
+    else fireBranchMoved(this, name, oldHead.state, newHead.state)
 
     oldHead
   }
@@ -308,20 +308,20 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
    * </p>
    *
    * @param engine the id of the offering BranchManager's engine
-   * @param branch the branch this update belongs to
+   * @param name the branch this update belongs to
    * @param state the state being the tip of this update
    * @param ancestors a list of ancestor state IDs the remote branch manager thought this branch manager might
    *            already be aware of; most recent first
    * @return the most recent state id that this BranchManager knows for the given branch; {@code 0} if the branch
    *         is unknown; the {@code state}'s id if the full branch is known
    */
-  def receiveUpdate(engine: Int, branch: String, state: Obj, ancestors: Seq[Long], callback: SyncCallback): Unit = {
+  def receiveUpdate(engine: Int, name: String, state: Obj, ancestors: Seq[Long], callback: SyncCallback): Unit = {
     val newHead = deserialize(state)
     if (newHead.resolve()) {
       //we have all we need
       newHead.addEngine(engine)
 
-      createOrMoveBranch(branch, newHead);
+      createOrMoveBranch(name, newHead);
 
     } else {
       //we need additional states
@@ -330,7 +330,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
         case None    => 0l
       }
 
-      callback.receiveUpdateCallback(this.engine.id, branch, 0l)
+      callback.receiveUpdateCallback(this.engine.id, name, 0l)
     }
   }
 
@@ -345,11 +345,11 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
    * </p>
    *
    * @param engine the id of the offering BranchManager's engine
-   * @param branch the branch this update belongs to
+   * @param name the branch this update belongs to
    * @param state the id of the state being the tip of this update
    * @param ancestors a list of ancestor states that is missing from the local branch, in chronological order
    */
-  def receiveMissing(engine: Int, branch: String, state: Long, ancestors: Seq[Obj]): Unit = {
+  def receiveMissing(engine: Int, name: String, state: Long, ancestors: Seq[Obj]): Unit = {
     ancestors.foreach { obj =>
       if (!deserialize(obj).resolve())
         throw new AssertionError()
@@ -359,7 +359,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
     if (!newHead.resolve()) throw new AssertionError()
     newHead.addEngine(engine)
 
-    createOrMoveBranch(branch, newHead)
+    createOrMoveBranch(name, newHead)
   }
 
   //send branch sync
@@ -372,12 +372,12 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
    * </p>
    *
    * @param engine the engine which should be updated
-   * @param branch the branch for which updates should be provided
+   * @param name the branch for which updates should be provided
    * @param callback a callback to provide the data to the caller
    */
-  def sendUpdate(engine: Int, branch: String, callback: SyncCallback): Unit = {
+  def sendUpdate(engine: Int, name: String, callback: SyncCallback): Unit = {
     val head =
-      branches.get(branch) match {
+      branches.get(name) match {
         case Some(branch) =>
           if (branch.head == null) throw new IllegalArgumentException() //TODO can this even happen?
           else branch.head
@@ -397,7 +397,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
       }
 
     val ancestors = if (state == null) Seq[Long](0) else Seq[Long](state.stateId)
-    callback.sendUpdateCallback(this.engine.id, branch, serialize(head), ancestors: _*)
+    callback.sendUpdateCallback(this.engine.id, name, serialize(head), ancestors: _*)
   }
 
   /**
@@ -408,13 +408,13 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
    * </p>
    *
    * @param engine the engine which should be updated
-   * @param branch the branch for which updates should be provided
+   * @param name the branch for which updates should be provided
    * @param ancestor the ancestor the remote branch manager reported it knew
    * @param callback a callback to provide the data to the caller
    */
-  def sendMissing(engine: Int, branch: String, ancestor: Long, callback: SyncCallback): Unit = {
+  def sendMissing(engine: Int, name: String, ancestor: Long, callback: SyncCallback): Unit = {
     val head =
-      branches.get(branch) match {
+      branches.get(name) match {
         case Some(branch) =>
           if (branch.head == null) throw new IllegalArgumentException() //TODO can this even happen?
           else branch.head
@@ -432,7 +432,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
       state = state.parent
     }
 
-    callback.sendMissingCallback(this.engine.id, branch, headId, ancestors: _*)
+    callback.sendMissingCallback(this.engine.id, name, headId, ancestors: _*)
   }
 
   //state mgmt

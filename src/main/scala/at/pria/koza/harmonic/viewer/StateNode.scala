@@ -31,14 +31,10 @@ class StateNode(val state: State, parent: StateNode, source: StateTreeModel) ext
 
   //AbstractTreeNode
 
-  private val _childSeq = mutable.ListBuffer[StateNode]()
-  override protected def childSeq = _childSeq
+  override protected val childSeq = mutable.ListBuffer[StateNode]()
 
   //used for fireTreeNodes*
-
-  private val childIndices = if (parent == null) null else Array(parent.childCount - 1)
-  private val childObjects = if (parent == null) null else Array[Object](this)
-  private val _path = pathArray
+  private val childIndices = if (parent == null) null else Array(parent.childCount)
 
   private[viewer] def this() = this(null, null, null)
 
@@ -50,10 +46,12 @@ class StateNode(val state: State, parent: StateNode, source: StateTreeModel) ext
         case node: DerivedState => model.resolve(node.parent)
       },
       model)
-    model.fireTreeNodesInserted(source, _path, childIndices, childObjects)
+    parent.childSeq += this
+    source.nodesWereInserted(parent, childIndices)
   }
 
-  def fireChanged(): Unit = source.fireTreeNodesChanged(source, _path, childIndices, childObjects)
+  def fireChanged(): Unit =
+    source.nodesChanged(parent, childIndices)
 
   override def toString(): String = {
     if (state == null) return "<root>"

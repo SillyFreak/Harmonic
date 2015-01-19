@@ -28,10 +28,4 @@ class StateTreeModel extends DefaultTreeModel(new StateNode()) {
 
   def resolve(state: State): StateNode =
     nodes.getOrElseUpdate(state.id, new StateNode(this, state))
-
-  override protected[viewer] def fireTreeNodesInserted(source: Object, path: Array[Object], childIndices: Array[Int], children: Array[Object]): Unit =
-    super.fireTreeNodesInserted(source, path, childIndices, children)
-
-  override protected[viewer] def fireTreeNodesChanged(source: Object, path: Array[Object], childIndices: Array[Int], children: Array[Object]): Unit =
-    super.fireTreeNodesChanged(source, path, childIndices, children)
 }

@@ -169,7 +169,7 @@ object BranchManager {
  * </p>
  */
 class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
-  class Branch private[BranchManager] () {
+  class Branch private[BranchManager] (val name: String) {
     private var _head: MetaState = _
     def head: MetaState = _head
     def head(head: MetaState): Unit = _head = head
@@ -177,11 +177,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
 
   private val branches = mutable.Map[String, Branch]()
   def branchIterator: Iterator[(String, MetaState)] =
-    branches.iterator.map {
-      _ match {
-        case (name, branch) => (name, branch.head)
-      }
-    }
+    branches.values.iterator.map { branch => (branch.name, branch.head) }
 
   private val states = mutable.Map[Long, MetaState]()
 
@@ -280,7 +276,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   }
 
   private def createOrMoveBranch(branch: String, newHead: MetaState): MetaState = {
-    val tip = branches.getOrElseUpdate(branch, new Branch())
+    val tip = branches.getOrElseUpdate(branch, new Branch(branch))
     val oldHead = tip.head
     tip.head(newHead)
 

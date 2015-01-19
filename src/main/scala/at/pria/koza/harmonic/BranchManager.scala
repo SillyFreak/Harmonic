@@ -169,11 +169,17 @@ object BranchManager {
  * </p>
  */
 class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
-  private val branches = new mutable.HashMap[String, Array[MetaState]]()
+  class Branch private[BranchManager] () {
+    private var _head: MetaState = _
+    def head: MetaState = _head
+    def head(head: MetaState): Unit = _head = head
+  }
+
+  private val branches = mutable.Map[String, Branch]()
   def branchIterator: Iterator[(String, MetaState)] =
     branches.iterator.map {
       _ match {
-        case (branch, Array(head)) => (branch, head)
+        case (name, branch) => (name, branch.head)
       }
     }
 
@@ -260,12 +266,12 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   def deleteBranch(branch: String): Unit = {
     if (_currentBranch == branch) throw new IllegalArgumentException("can't delete curent branch")
     branches.remove(branch) match {
-      case Some(Array(head)) => fireBranchDeleted(this, branch, head.state)
-      case None              => throw new IllegalArgumentException("branch does not exist")
+      case Some(head) => fireBranchDeleted(this, branch, head.head.state)
+      case None       => throw new IllegalArgumentException("branch does not exist")
     }
   }
 
-  def branchTip(branch: String): Option[State] = branches.get(branch).map { _(0).state }
+  def branchTip(branch: String): Option[State] = branches.get(branch).map { _.head.state }
 
   def branchTip(branch: String, newHead: State): State = {
     if (newHead.engine != engine) throw new IllegalArgumentException("newHead is from another engine")
@@ -274,9 +280,9 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   }
 
   private def createOrMoveBranch(branch: String, newHead: MetaState): MetaState = {
-    val tip = branches.getOrElseUpdate(branch, Array[MetaState](null))
-    val oldHead = tip(0)
-    tip(0) = newHead
+    val tip = branches.getOrElseUpdate(branch, new Branch())
+    val oldHead = tip.head
+    tip.head(newHead)
 
     if (_currentBranch.equals(branch)) engine.setHead(newHead.state)
     if (oldHead == null) fireBranchCreated(this, branch, newHead.state)
@@ -376,9 +382,10 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   def sendUpdate(engine: Int, branch: String, callback: SyncCallback): Unit = {
     val head =
       branches.get(branch) match {
-        case Some(Array(null)) => throw new IllegalArgumentException() //TODO can this even happen?
-        case Some(Array(head)) => head
-        case None              => throw new IllegalArgumentException("branch does not exist")
+        case Some(branch) =>
+          if (branch.head == null) throw new IllegalArgumentException() //TODO can this even happen?
+          else branch.head
+        case None => throw new IllegalArgumentException("branch does not exist")
       }
     val state =
       if (engine == 0) {
@@ -412,9 +419,10 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   def sendMissing(engine: Int, branch: String, ancestor: Long, callback: SyncCallback): Unit = {
     val head =
       branches.get(branch) match {
-        case Some(Array(null)) => throw new IllegalArgumentException() //TODO can this even happen?
-        case Some(Array(head)) => head
-        case None              => throw new IllegalArgumentException("branch does not exist")
+        case Some(branch) =>
+          if (branch.head == null) throw new IllegalArgumentException() //TODO can this even happen?
+          else branch.head
+        case None => throw new IllegalArgumentException("branch does not exist")
       }
 
     head.addEngine(engine)

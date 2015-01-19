@@ -1,5 +1,5 @@
 /**
- * BranchManager.java
+ * BranchManager.scala
  *
  * Created on 29.07.2013
  */

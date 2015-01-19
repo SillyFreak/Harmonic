@@ -22,7 +22,7 @@ trait Entity extends Serializable {
   private var _engine: Engine = _
   private var _id: Int = _
 
-  protected[this] def init(engine: Engine): Unit =
+  def init()(implicit engine: Engine): Unit =
     if (_engine == null) engine.putEntity(this)
 
   /**

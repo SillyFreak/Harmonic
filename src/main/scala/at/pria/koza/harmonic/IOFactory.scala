@@ -18,5 +18,5 @@ import at.pria.koza.polybuf.PolybufSerializable
  * @author SillyFreak
  */
 trait IOFactory[T <: PolybufSerializable] {
-  def getIO(engine: Engine): PolybufIO[T]
+  def getIO(implicit engine: Engine): PolybufIO[T]
 }

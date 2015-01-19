@@ -35,7 +35,6 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
   private val states = new StateTreeModel()
   private val statesTree = new JTree(states)
 
-  statesTree.setMinimumSize(new Dimension(100, 0))
   statesTree.setRootVisible(false)
 
   {

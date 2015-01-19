@@ -176,8 +176,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   }
 
   private val branches = mutable.Map[String, Branch]()
-  def branchIterator: Iterator[(String, MetaState)] =
-    branches.values.iterator.map { branch => (branch.name, branch.head) }
+  def branchIterator: Iterator[Branch] = branches.values.iterator
 
   private val states = mutable.Map[Long, MetaState]()
 

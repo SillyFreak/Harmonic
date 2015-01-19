@@ -61,8 +61,8 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
     listenTo(mgr.engine)
     mgr.addBranchListener(listener)
 
-    for ((branch, _) <- mgr.branchIterator) {
-      val head = states.resolve(mgr.branchTip(branch).get)
+    for (branch <- mgr.branchIterator) {
+      val head = states.resolve(branch.head.state)
       head.labels.add("branch:" + branch)
       head.fireChanged()
     }

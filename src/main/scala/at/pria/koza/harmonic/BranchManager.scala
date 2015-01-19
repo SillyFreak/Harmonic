@@ -14,6 +14,7 @@ import java.util.HashMap
 import java.util.HashSet
 
 import at.pria.koza.harmonic.BranchManager.SyncCallback
+import at.pria.koza.harmonic.BranchManager.MetaState
 import at.pria.koza.polybuf.PolybufConfig
 import at.pria.koza.polybuf.PolybufException
 import at.pria.koza.polybuf.PolybufIO
@@ -69,6 +70,96 @@ object BranchManager {
      */
     def sendMissingCallback(engine: Int, branch: String, state: Long, ancestors: Obj*): Unit = {}
   }
+
+  private[harmonic] class MetaState(mgr: BranchManager, val stateId: Long, val parentId: Long) extends PolybufSerializable {
+    private var _action: Obj = _
+
+    private var _parent: MetaState = _
+    def parent = _parent
+
+    private var _state: State = _
+    def state = _state
+
+    //set of engines known to know this meta state
+    private[BranchManager] val engines = new HashSet[Integer]()
+
+    /**
+     * <p>
+     * Used to add states created by the engine managed by this branch manager.
+     * </p>
+     *
+     * @param state the state to be added
+     */
+    def this(mgr: BranchManager, state: State) = {
+      this(
+        mgr,
+        state.id,
+        state match {
+          case root: RootState    => 0
+          case node: DerivedState => node.parent.id
+        })
+
+      _state = state;
+      _parent = state match {
+        case root: RootState    => null
+        case node: DerivedState => mgr.put(node.parent)
+      }
+      addEngine(mgr.engine.id)
+    }
+
+    /**
+     * <p>
+     * Used to add states received from an engine other than managed by this branch manager.
+     * {@linkplain #resolve() Resolving} will be necessary before this MetaState can be used.
+     * </p>
+     *
+     * @param state the protobuf serialized form of the state to be added
+     * @param action the action extracted from that protobuf extension
+     */
+    def this(mgr: BranchManager, state: Obj) = {
+      this(
+        mgr,
+        state.getExtension(State.EXTENSION).getId(),
+        state.getExtension(State.EXTENSION).getParent())
+      _action = state.getExtension(State.EXTENSION).getAction()
+    }
+
+    override def typeId: Int = State.FIELD
+
+    /**
+     * <p>
+     * Resolves this state. Returns true when the MetaState is now fully initialized, false if it is still not.
+     * This method must be called for states received from another engine, as the parent state may not be
+     * present at the time it is received. After all necessary ancestor states were received, then resolving
+     * will be successful and the state will be added to the underlying engine.
+     * </p>
+     *
+     * @return {@code true} if the MetaState was resolved, so that there is now a corresponding {@link State}
+     *         in the underlying engine; {@code false} otherwise
+     */
+    def resolve(): Boolean = {
+      if (_state != null) true
+      else {
+        assert(stateId != 0)
+        if (_parent == null) _parent = mgr.states.get(parentId)
+        if (_parent == null || !_parent.resolve()) false
+        else {
+          _state = new DerivedState(parent.state, stateId, _action)
+          addEngine(mgr.engine.id)
+          addEngine(state.engineId)
+          true
+        }
+      }
+    }
+
+    def addEngine(id: Int): Unit = {
+      //an assuption here is that if this state has an engine marked, all its parents will have it marked too
+      //if the state is not resolved, i.e. not attached to its parent, then this assumption could be broken
+      //when it is subsequently resolved, so don't allow that
+      if (!resolve()) throw new IllegalStateException()
+      if (engines.add(id) && _parent != null) _parent.addEngine(id)
+    }
+  }
 }
 
 /**
@@ -76,7 +167,7 @@ object BranchManager {
  * Creates a new branch manager.
  * </p>
  */
-class BranchManager(val engine: Engine) {
+class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   //TODO java collections
   private val _branches = new HashMap[String, Array[MetaState]]()
   val branches = unmodifiableMap[String, Array[MetaState]](_branches).keySet()
@@ -370,104 +461,14 @@ class BranchManager(val engine: Engine) {
   }
 
   private def put(state: State): MetaState =
-    states.getOrElseUpdate(state.id, new MetaState(state))
-
-  private class MetaState(val stateId: Long, val parentId: Long) extends PolybufSerializable {
-    private var _action: Obj = _
-
-    private var _parent: MetaState = _
-    def parent = _parent
-
-    private var _state: State = _
-    def state = _state
-
-    //set of engines known to know this meta state
-    private[BranchManager] val engines = new HashSet[Integer]()
-
-    /**
-     * <p>
-     * Used to add states created by the engine managed by this branch manager.
-     * </p>
-     *
-     * @param state the state to be added
-     */
-    def this(state: State) = {
-      this(
-        state.id,
-        state match {
-          case root: RootState    => 0
-          case node: DerivedState => node.parent.id
-        })
-
-      _state = state;
-      _parent = state match {
-        case root: RootState    => null
-        case node: DerivedState => put(node.parent)
-      }
-      addEngine(engine.id)
-    }
-
-    /**
-     * <p>
-     * Used to add states received from an engine other than managed by this branch manager.
-     * {@linkplain #resolve() Resolving} will be necessary before this MetaState can be used.
-     * </p>
-     *
-     * @param state the protobuf serialized form of the state to be added
-     * @param action the action extracted from that protobuf extension
-     */
-    def this(state: Obj) = {
-      this(
-        state.getExtension(State.EXTENSION).getId(),
-        state.getExtension(State.EXTENSION).getParent())
-      _action = state.getExtension(State.EXTENSION).getAction()
-    }
-
-    override def typeId: Int = State.FIELD
-
-    /**
-     * <p>
-     * Resolves this state. Returns true when the MetaState is now fully initialized, false if it is still not.
-     * This method must be called for states received from another engine, as the parent state may not be
-     * present at the time it is received. After all necessary ancestor states were received, then resolving
-     * will be successful and the state will be added to the underlying engine.
-     * </p>
-     *
-     * @return {@code true} if the MetaState was resolved, so that there is now a corresponding {@link State}
-     *         in the underlying engine; {@code false} otherwise
-     */
-    def resolve(): Boolean = {
-      if (_state != null) true
-      else {
-        assert(stateId != 0)
-        if (_parent == null) _parent = states.get(parentId)
-        if (_parent == null || !_parent.resolve()) false
-        else {
-          _state = new DerivedState(parent.state, stateId, _action)
-          addEngine(engine.id)
-          addEngine(state.engineId)
-          true
-        }
-      }
-    }
-
-    def addEngine(id: Int): Unit = {
-      //an assuption here is that if this state has an engine marked, all its parents will have it marked too
-      //if the state is not resolved, i.e. not attached to its parent, then this assumption could be broken
-      //when it is subsequently resolved, so don't allow that
-      if (!resolve()) throw new IllegalStateException()
-      if (engines.add(id) && _parent != null) _parent.addEngine(id)
-    }
-  }
+    states.getOrElseUpdate(state.id, new MetaState(this, state))
 
   //polybuf
 
-  private def getIO(): PolybufIO[MetaState] = new IO()
-
-  def configure(config: PolybufConfig): Unit = config.add(getIO())
+  override def getIO(implicit engine: Engine): PolybufIO[MetaState] = new IO()
 
   private class IO extends PolybufIO[MetaState] {
-    val delegate: PolybufIO[State] = State.getIO(engine)
+    private val delegate = State.getIO(engine)
 
     override def extension: GeneratedExtension[Obj, _] = delegate.extension
 
@@ -482,7 +483,7 @@ class BranchManager(val engine: Engine) {
       //handle states already present properly
       var result = states.get(id)
       if (result == null) {
-        result = new MetaState(obj)
+        result = new MetaState(BranchManager.this, obj)
         states.put(id, result)
       }
       result

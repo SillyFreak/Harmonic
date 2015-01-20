@@ -189,11 +189,14 @@ object State extends IOFactory[State] {
   }
 }
 
-sealed abstract class State(val engine: Engine, val id: Long) extends PolybufSerializable {
+sealed abstract class State(val engine: Engine, val id: Long) extends PolybufSerializable with Ref {
   engine.putState(this)
 
   //PolybufSerializable
   override def typeId: Int = State.FIELD
+
+  //Ref
+  override def state = this
 
   val seq: List[State]
   val seqNoRoot: List[DerivedState]

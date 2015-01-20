@@ -173,6 +173,8 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
     private var _head: MetaState = _
     def head: MetaState = _head
     def head(head: MetaState): Unit = _head = head
+
+    override def toString(): String = "%s@%016X".format(name, head.stateId)
   }
 
   private val branches = mutable.Map[String, Branch]()

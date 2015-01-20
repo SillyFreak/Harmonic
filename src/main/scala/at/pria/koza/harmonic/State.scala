@@ -34,9 +34,9 @@ object State extends IOFactory[State] {
   val FIELD = StateP.STATE_FIELD_NUMBER
   val EXTENSION = StateP.state
 
-  def getIO(implicit engine: Engine): PolybufIO[State] = new IO(engine)
+  def getIO(implicit engine: Engine): PolybufIO[State] = new IO()
 
-  private class IO(engine: Engine) extends PolybufIO[State] {
+  private class IO(implicit engine: Engine) extends PolybufIO[State] {
     override def extension: GeneratedExtension[Obj, StateP] = EXTENSION
 
     @throws[PolybufException]

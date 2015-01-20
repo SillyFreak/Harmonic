@@ -31,7 +31,6 @@ import at.pria.koza.harmonic.StateListener
  */
 @SerialVersionUID(1)
 class HarmonicViewer extends JPanel(new BorderLayout()) {
-  private val listener = new Listener()
   private val states = new StateTreeModel()
   private val statesTree = new JTree(states)
 
@@ -44,8 +43,8 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
   }
 
   def listenTo(engine: Engine): Unit = {
-    engine.addStateListener(listener)
-    engine.addHeadListener(listener)
+    engine.addStateListener(Listener)
+    engine.addHeadListener(Listener)
     val it = engine.states.values.iterator
     while (it.hasNext)
       states.resolve(it.next())
@@ -58,7 +57,7 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
 
   def listenTo(mgr: BranchManager): Unit = {
     listenTo(mgr.engine)
-    mgr.addBranchListener(listener)
+    mgr.addBranchListener(Listener)
 
     for (branch <- mgr.branchIterator) {
       val head = states.resolve(branch.head.state)
@@ -70,7 +69,7 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
   private def makeVisible(node: StateNode): Unit =
     statesTree.makeVisible(new TreePath(node.path))
 
-  private class Listener extends HeadListener with StateListener with BranchListener {
+  private object Listener extends HeadListener with StateListener with BranchListener {
     override def headMoved(prevHead: State, newHead: State): Unit = {
       val prevNode = states.resolve(prevHead)
       prevNode.labels.remove("<HEAD>")

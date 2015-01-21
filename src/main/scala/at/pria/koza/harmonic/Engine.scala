@@ -55,12 +55,24 @@ object Engine {
  * @param id the engine's ID.
  */
 class Engine(val id: Int) {
+  object states {
+    private var _states = immutable.Map[Long, State]()
+    def states: immutable.Map[Long, State] = _states
+
+    def contains(id: Long): Boolean = _states.contains(id)
+
+    def get(id: Long): Option[State] = _states.get(id)
+    def apply(id: Long): State = _states(id)
+    private def update(id: Long, state: State) = {
+      if (contains(id)) throw new IllegalArgumentException("can't redefine a state")
+      _states = _states.updated(id, state)
+      fireStateAdded(state)
+    }
+    def +=(state: State): Unit = this(state.id) = state
+  }
+
   private val entities = mutable.Map[Int, Entity]()
   def entity(id: Int): Option[Entity] = entities.get(id)
-
-  private var _states = immutable.Map[Long, State]()
-  def states: immutable.Map[Long, State] = _states
-  def state(id: Long): Option[State] = _states.get(id)
 
   val config: PolybufConfig = new PolybufConfig()
   def addIO[T <: PolybufSerializable](io: IOFactory[T]): Unit =
@@ -172,20 +184,6 @@ class Engine(val id: Int) {
    * @param entity the entity to register in this engine
    */
   def putEntity(entity: Entity): Unit = new RegisterEntity(entity)()
-
-  /**
-   * <p>
-   * Adds a state to this engine.
-   * </p>
-   *
-   * @param state the state to be added
-   */
-  def putState(state: State): Unit = {
-    val id = state.id
-    if (_states.contains(id)) throw new IllegalStateException()
-    _states = _states.updated(id, state)
-    fireStateAdded(state)
-  }
 
   override def toString(): String = "%s@%08X".format(getClass().getSimpleName(), id)
 

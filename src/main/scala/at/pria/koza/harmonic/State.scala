@@ -62,12 +62,12 @@ object State extends IOFactory[State] {
       val p = obj.getExtension(extension)
       val id = p.getId()
       //handle states already present properly
-      engine.state(id) match {
+      engine.states.get(id) match {
         case Some(e) => e
         case None =>
           if (id == 0)
             throw new AssertionError("engine has no root state")
-          new DerivedState(engine.state(p.getParent()).get, id, p.getAction())
+          new DerivedState(engine.states(p.getParent()), id, p.getAction())
       }
     }
   }
@@ -190,7 +190,7 @@ object State extends IOFactory[State] {
 }
 
 sealed abstract class State(val engine: Engine, val id: Long) extends PolybufSerializable with Ref {
-  engine.putState(this)
+  engine.states += this
 
   //PolybufSerializable
   override def typeId: Int = State.FIELD

@@ -200,7 +200,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   }
 
   //put the root
-  createBranch(_currentBranch, engine.state(0l).get)
+  createBranch(_currentBranch, engine.states(0l))
 
   //ctors & misc
 

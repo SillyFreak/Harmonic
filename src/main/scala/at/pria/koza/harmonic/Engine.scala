@@ -69,6 +69,13 @@ class Engine(val id: Int) {
       fireStateAdded(state)
     }
     def +=(state: State): Unit = this(state.id) = state
+
+    private val listeners = mutable.ListBuffer[StateListener]()
+    def addListener(l: StateListener): Unit = listeners += l
+    def removeListener(l: StateListener): Unit = listeners -= l
+
+    private[harmonic] def fireStateAdded(state: State): Unit =
+      fire(listeners) { _.stateAdded(state) }
   }
 
   private val entities = mutable.Map[Int, Entity]()
@@ -80,7 +87,6 @@ class Engine(val id: Int) {
   def getIO(typeID: Int): Option[PolybufIO[_ <: PolybufSerializable]] =
     config.get(typeID)
 
-  private val stateListeners = mutable.ListBuffer[StateListener]()
   private val headListeners = mutable.ListBuffer[HeadListener]()
 
   private var _nextStateId: Long = (id & 0xFFFFFFFFl) << 32
@@ -107,17 +113,11 @@ class Engine(val id: Int) {
   def this() =
     this(false)
 
-  def addStateListener(l: StateListener): Unit = stateListeners += l
-  def removeStateListener(l: StateListener): Unit = stateListeners -= l
-
   def addHeadListener(l: HeadListener): Unit = headListeners += l
   def removeHeadListener(l: HeadListener): Unit = headListeners -= l
 
   private[harmonic] def fire[T <: EventListener, U](listeners: Seq[T])(action: T => U): Unit =
     listeners.synchronized { listeners.reverseIterator.foreach(action) }
-
-  private[harmonic] def fireStateAdded(state: State): Unit =
-    fire(stateListeners) { _.stateAdded(state) }
 
   private[harmonic] def fireHeadMoved(prevHead: State, newHead: State): Unit =
     fire(headListeners) { _.headMoved(prevHead, newHead) }

@@ -55,6 +55,33 @@ object Engine {
  * @param id the engine's ID.
  */
 class Engine(val id: Int) {
+  /**
+   * <p>
+   * Creates an engine.
+   * </p>
+   *
+   * @param spectating whether this engine will only spectate or also execute actions
+   */
+  def this(spectating: Boolean) =
+    this(if (spectating) 0 else Engine.nextNonZeroInt())
+
+  /**
+   * <p>
+   * Creates a non-spectating engine.
+   * </p>
+   */
+  def this() =
+    this(false)
+
+  private def fire[T <: EventListener, U](listeners: Seq[T])(action: T => U): Unit =
+    listeners.synchronized { listeners.reverseIterator.foreach(action) }
+
+  val config: PolybufConfig = new PolybufConfig()
+  def addIO[T <: PolybufSerializable](io: IOFactory[T]): Unit =
+    config.add(io.getIO(this))
+  def getIO(typeID: Int): Option[PolybufIO[_ <: PolybufSerializable]] =
+    config.get(typeID)
+
   object states {
     private var states = immutable.Map[Long, State]()
     def map: immutable.Map[Long, State] = states
@@ -182,33 +209,6 @@ class Engine(val id: Int) {
     private[harmonic] def fireHeadMoved(prevHead: State, newHead: State): Unit =
       fire(listeners) { _.headMoved(prevHead, newHead) }
   }
-
-  val config: PolybufConfig = new PolybufConfig()
-  def addIO[T <: PolybufSerializable](io: IOFactory[T]): Unit =
-    config.add(io.getIO(this))
-  def getIO(typeID: Int): Option[PolybufIO[_ <: PolybufSerializable]] =
-    config.get(typeID)
-
-  /**
-   * <p>
-   * Creates an engine.
-   * </p>
-   *
-   * @param spectating whether this engine will only spectate or also execute actions
-   */
-  def this(spectating: Boolean) =
-    this(if (spectating) 0 else Engine.nextNonZeroInt())
-
-  /**
-   * <p>
-   * Creates a non-spectating engine.
-   * </p>
-   */
-  def this() =
-    this(false)
-
-  private[harmonic] def fire[T <: EventListener, U](listeners: Seq[T])(action: T => U): Unit =
-    listeners.synchronized { listeners.reverseIterator.foreach(action) }
 
   override def toString(): String = "%s@%08X".format(getClass().getSimpleName(), id)
 }

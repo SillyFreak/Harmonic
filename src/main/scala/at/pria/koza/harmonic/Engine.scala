@@ -56,16 +56,16 @@ object Engine {
  */
 class Engine(val id: Int) {
   object states {
-    private var _states = immutable.Map[Long, State]()
-    def states: immutable.Map[Long, State] = _states
+    private var states = immutable.Map[Long, State]()
+    def map: immutable.Map[Long, State] = states
 
-    def contains(id: Long): Boolean = _states.contains(id)
+    def contains(id: Long): Boolean = states.contains(id)
 
-    def get(id: Long): Option[State] = _states.get(id)
-    def apply(id: Long): State = _states(id)
+    def get(id: Long): Option[State] = states.get(id)
+    def apply(id: Long): State = states(id)
     private def update(id: Long, state: State) = {
       if (contains(id)) throw new IllegalArgumentException("can't redefine a state")
-      _states = _states.updated(id, state)
+      states = states.updated(id, state)
       fireStateAdded(state)
     }
     def +=(state: State): Unit = this(state.id) = state

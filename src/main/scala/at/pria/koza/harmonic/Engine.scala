@@ -128,16 +128,66 @@ class Engine(val id: Int) {
     }
   }
 
+  object head extends Ref {
+    private var head: State = new RootState(Engine.this)
+    override def state = head
+
+    /**
+     * <p>
+     * Moves this engine's head to the given state.
+     * </p>
+     *
+     * @param head the engine's new head state
+     */
+    def update(head: State): Unit = {
+      if (head == null)
+        throw new IllegalArgumentException()
+
+      //common predecessor
+      val pred = this.head.commonPredecessor(head)
+
+      //roll back to pred
+      {
+        var current = this.head
+        while (current != pred) {
+          current.asInstanceOf[DerivedState].revert()
+          current = current.parent
+        }
+      }
+
+      //move forward to new head
+      {
+        var states = immutable.List[State]()
+        var current = head
+        while (current != pred) {
+          states = current :: states
+          current = current.parent
+        }
+        states.foreach {
+          _.asInstanceOf[DerivedState].apply()
+        }
+      }
+
+      //set new head
+      val old = this.head
+      this.head = head
+      fireHeadMoved(old, this.head)
+    }
+
+    private val listeners = mutable.ListBuffer[HeadListener]()
+
+    def addListener(l: HeadListener): Unit = listeners += l
+    def removeListener(l: HeadListener): Unit = listeners -= l
+
+    private[harmonic] def fireHeadMoved(prevHead: State, newHead: State): Unit =
+      fire(listeners) { _.headMoved(prevHead, newHead) }
+  }
+
   val config: PolybufConfig = new PolybufConfig()
   def addIO[T <: PolybufSerializable](io: IOFactory[T]): Unit =
     config.add(io.getIO(this))
   def getIO(typeID: Int): Option[PolybufIO[_ <: PolybufSerializable]] =
     config.get(typeID)
-
-  private val headListeners = mutable.ListBuffer[HeadListener]()
-
-  private var _head: State = new RootState(this)
-  def head = _head
 
   /**
    * <p>
@@ -157,56 +207,8 @@ class Engine(val id: Int) {
   def this() =
     this(false)
 
-  def addHeadListener(l: HeadListener): Unit = headListeners += l
-  def removeHeadListener(l: HeadListener): Unit = headListeners -= l
-
   private[harmonic] def fire[T <: EventListener, U](listeners: Seq[T])(action: T => U): Unit =
     listeners.synchronized { listeners.reverseIterator.foreach(action) }
-
-  private[harmonic] def fireHeadMoved(prevHead: State, newHead: State): Unit =
-    fire(headListeners) { _.headMoved(prevHead, newHead) }
-
-  /**
-   * <p>
-   * Moves this engine's head to the given state.
-   * </p>
-   *
-   * @param head the engine's new head state
-   */
-  def setHead(head: State): Unit = {
-    if (head == null)
-      throw new IllegalArgumentException()
-
-    //common predecessor
-    val pred = _head.commonPredecessor(head)
-
-    //roll back to pred
-    {
-      var current = _head
-      while (current != pred) {
-        current.asInstanceOf[DerivedState].revert()
-        current = current.parent
-      }
-    }
-
-    //move forward to new head
-    {
-      var states = immutable.List[State]()
-      var current = head
-      while (current != pred) {
-        states = current :: states
-        current = current.parent
-      }
-      states.foreach {
-        _.asInstanceOf[DerivedState].apply()
-      }
-    }
-
-    //set new head
-    val old = _head
-    _head = head
-    fireHeadMoved(old, _head)
-  }
 
   override def toString(): String = "%s@%08X".format(getClass().getSimpleName(), id)
 }

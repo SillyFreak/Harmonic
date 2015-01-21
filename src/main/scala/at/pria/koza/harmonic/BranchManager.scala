@@ -193,7 +193,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   def currentBranch(name: String): Unit = {
     branchTip(name) match {
       case Some(tip) =>
-        engine.setHead(tip)
+        engine.head.update(tip)
         _currentBranch = name
       case None => throw new IllegalArgumentException("can't switch to nonexistant branch")
     }
@@ -285,7 +285,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
     val oldHead = tip.head
     tip.head(newHead)
 
-    if (_currentBranch.equals(name)) engine.setHead(newHead.state)
+    if (_currentBranch.equals(name)) engine.head.update(newHead.state)
     if (oldHead == null) fireBranchCreated(this, name, newHead.state)
     else fireBranchMoved(this, name, oldHead.state, newHead.state)
 

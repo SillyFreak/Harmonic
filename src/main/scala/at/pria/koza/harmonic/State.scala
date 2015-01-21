@@ -240,7 +240,7 @@ class DerivedState(val parent: State, id: Long, val actionObj: Obj) extends Stat
   def this(parent: State, action: Action) = {
     this(
       parent,
-      parent.engine.nextStateId(),
+      parent.engine.states.nextStateId(),
       try {
         new PolybufOutput(parent.engine.config).writeObject(action)
       } catch {

@@ -70,7 +70,22 @@ class Engine(val id: Int) {
     }
     def +=(state: State): Unit = this(state.id) = state
 
+    private var _nextStateId: Long = (id & 0xFFFFFFFFl) << 32
+
+    /**
+     * <p>
+     * Returns the next ID to be assigned to a state created by this engine.
+     * </p>
+     *
+     * @return the next ID to be used for a state created by this engine
+     */
+    def nextStateId(): Long = {
+      _nextStateId += 1
+      _nextStateId
+    }
+
     private val listeners = mutable.ListBuffer[StateListener]()
+
     def addListener(l: StateListener): Unit = listeners += l
     def removeListener(l: StateListener): Unit = listeners -= l
 
@@ -89,7 +104,6 @@ class Engine(val id: Int) {
 
   private val headListeners = mutable.ListBuffer[HeadListener]()
 
-  private var _nextStateId: Long = (id & 0xFFFFFFFFl) << 32
   private var _nextEntityId: Int = 0;
 
   private var _head: State = new RootState(this)
@@ -121,18 +135,6 @@ class Engine(val id: Int) {
 
   private[harmonic] def fireHeadMoved(prevHead: State, newHead: State): Unit =
     fire(headListeners) { _.headMoved(prevHead, newHead) }
-
-  /**
-   * <p>
-   * Returns the next ID to be assigned to a state created by this engine.
-   * </p>
-   *
-   * @return the next ID to be used for a state created by this engine
-   */
-  def nextStateId(): Long = {
-    _nextStateId += 1
-    _nextStateId
-  }
 
   /**
    * <p>

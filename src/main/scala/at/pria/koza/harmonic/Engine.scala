@@ -93,8 +93,40 @@ class Engine(val id: Int) {
       fire(listeners) { _.stateAdded(state) }
   }
 
-  private val entities = mutable.Map[Int, Entity]()
-  def entity(id: Int): Option[Entity] = entities.get(id)
+  object entities {
+    private var nextEntityId: Int = 0;
+
+    private val entities = mutable.Map[Int, Entity]()
+
+    def contains(id: Int): Boolean = entities.contains(id)
+
+    def get(id: Int): Option[Entity] = entities.get(id)
+    def apply(id: Int): Entity = entities(id)
+
+    /**
+     * <p>
+     * Adds an entity to this engine, assigning it a unique id.
+     * </p>
+     *
+     * @param entity the entity to register in this engine
+     */
+    def +=(entity: Entity): Unit = new RegisterEntity(entity)()
+
+    private class RegisterEntity(entity: Entity) extends Modification {
+      protected[this] override def apply0(): Unit = {
+        if (contains(nextEntityId)) throw new IllegalArgumentException("can't redefine an entity")
+        entities(nextEntityId) = entity
+        entity.engine(Engine.this, nextEntityId)
+        nextEntityId += 1
+      }
+
+      override def revert(): Unit = {
+        entities -= entity.id
+        entity.engine(null, -1)
+        nextEntityId -= 1
+      }
+    }
+  }
 
   val config: PolybufConfig = new PolybufConfig()
   def addIO[T <: PolybufSerializable](io: IOFactory[T]): Unit =
@@ -103,8 +135,6 @@ class Engine(val id: Int) {
     config.get(typeID)
 
   private val headListeners = mutable.ListBuffer[HeadListener]()
-
-  private var _nextEntityId: Int = 0;
 
   private var _head: State = new RootState(this)
   def head = _head
@@ -178,30 +208,5 @@ class Engine(val id: Int) {
     fireHeadMoved(old, _head)
   }
 
-  /**
-   * <p>
-   * Adds an entity to this engine, assigning it a unique id.
-   * </p>
-   *
-   * @param entity the entity to register in this engine
-   */
-  def putEntity(entity: Entity): Unit = new RegisterEntity(entity)()
-
   override def toString(): String = "%s@%08X".format(getClass().getSimpleName(), id)
-
-  private class RegisterEntity(entity: Entity) extends Modification {
-    protected[this] override def apply0(): Unit = {
-      val id = _nextEntityId
-      _nextEntityId += 1
-      if (entities.contains(id)) throw new IllegalStateException()
-      entity.engine(Engine.this, id)
-      entities(id) = entity
-    }
-
-    override def revert(): Unit = {
-      entities -= entity.id
-      entity.engine(null, -1)
-      _nextEntityId -= 1
-    }
-  }
 }

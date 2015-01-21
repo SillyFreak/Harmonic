@@ -38,7 +38,7 @@ object Action {
  *
  * @param engine the engine that is modified by this action
  */
-abstract class Action(engine: Engine) {
+abstract class Action()(implicit engine: Engine) {
   private var _modifications = List[Modification]()
 
   /**

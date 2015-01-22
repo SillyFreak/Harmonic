@@ -293,8 +293,8 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   }
 
   def execute[T <: Action](action: T): T = {
-    val state = new DerivedState(branchTip(_currentBranch).get, action)
-    createOrMoveBranch(_currentBranch, put(state))
+    engine.execute(action);
+    createOrMoveBranch(_currentBranch, put(engine.head.state))
     action
   }
 

@@ -212,5 +212,11 @@ class Engine(val id: Int) {
       fire(listeners) { _.headMoved(prevHead, newHead) }
   }
 
+  def execute[T <: Action](action: T): T = {
+    val state = new DerivedState(head.state, action)
+    head.update(state)
+    action
+  }
+
   override def toString(): String = "%s@%08X".format(getClass().getSimpleName(), id)
 }

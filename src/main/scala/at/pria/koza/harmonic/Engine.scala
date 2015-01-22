@@ -95,7 +95,7 @@ class Engine(val id: Int) {
       states = states.updated(id, state)
       fireStateAdded(state)
     }
-    def +=(state: State): Unit = this(state.id) = state
+    private[harmonic] def +=(state: State): Unit = this(state.id) = state
 
     private var _nextStateId: Long = (id & 0xFFFFFFFFl) << 32
 
@@ -106,7 +106,7 @@ class Engine(val id: Int) {
      *
      * @return the next ID to be used for a state created by this engine
      */
-    def nextStateId(): Long = {
+    private[harmonic] def nextStateId(): Long = {
       _nextStateId += 1
       _nextStateId
     }
@@ -137,7 +137,7 @@ class Engine(val id: Int) {
      *
      * @param entity the entity to register in this engine
      */
-    def +=(entity: Entity): Unit = new RegisterEntity(entity)()
+    private[harmonic] def +=(entity: Entity): Unit = new RegisterEntity(entity)()
 
     private class RegisterEntity(entity: Entity) extends Modification {
       protected[this] override def apply0(): Unit = {

@@ -180,6 +180,10 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   }
 
   private val branches = mutable.Map[String, Branch]()
+  private def getOrCreateBranch(name: String): Branch = {
+    val branch = branches.getOrElseUpdate(name, new Branch(name));
+    branch
+  }
   def branchIterator: Iterator[Branch] = branches.values.iterator
   def branch(name: String): Option[Branch] = branches.get(name)
 
@@ -187,20 +191,15 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
 
   private val branchListeners = mutable.ListBuffer[BranchListener]()
 
-  private var _currentBranch = BranchManager.BRANCH_DEFAULT
+  //put the root
+  private var _currentBranch = getOrCreateBranch(BranchManager.BRANCH_DEFAULT)
   def currentBranch = _currentBranch
 
-  def currentBranch(name: String): Unit = {
-    branchTip(name) match {
-      case Some(tip) =>
-        engine.head() = tip
-        _currentBranch = name
-      case None => throw new IllegalArgumentException("can't switch to nonexistant branch")
-    }
+  def currentBranch(branch: Branch): Unit = {
+    if (branch.state.engine != engine) throw new IllegalArgumentException("branch is from another engine")
+    engine.head() = branch.state
+    _currentBranch = branch
   }
-
-  //put the root
-  createBranch(_currentBranch, engine.states(0l))
 
   //ctors & misc
 
@@ -255,21 +254,26 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
 
   //branch mgmt
 
-  def createBranchHere(name: String): Unit =
-    createBranch(name, branchTip(currentBranch).get)
+  def createBranchHere(name: String): Branch =
+    createBranch(name, currentBranch.state)
 
-  def createBranch(name: String, state: State): Unit = {
+  def createBranch(name: String, state: State): Branch = {
     if (state.engine != engine) throw new IllegalArgumentException("state is from another engine")
     if (branches.contains(name)) throw new IllegalArgumentException("branch already exists")
-    createOrMoveBranch(name, put(state))
+    val branch = getOrCreateBranch(name)
+    branch.head(put(state))
+    fireBranchCreated(this, name, state)
+    branch
   }
 
-  def deleteBranch(name: String): Unit = {
-    if (_currentBranch == name) throw new IllegalArgumentException("can't delete curent branch")
-    branches.remove(name) match {
-      case Some(head) => fireBranchDeleted(this, name, head.head.state)
-      case None       => throw new IllegalArgumentException("branch does not exist")
+  def deleteBranch(branch: Branch): Unit = {
+    if (branch.state.engine != engine) throw new IllegalArgumentException("branch is from another engine")
+    if (_currentBranch == branch) throw new IllegalArgumentException("can't delete curent branch")
+    branches.remove(branch.name) match {
+      case None =>
+        assert(false)
     }
+    fireBranchDeleted(this, branch.name, branch.state)
   }
 
   def branchTip(name: String): Option[State] = branches.get(name).map { _.head.state }
@@ -277,24 +281,22 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   def branchTip(name: String, newHead: State): State = {
     if (newHead.engine != engine) throw new IllegalArgumentException("newHead is from another engine")
     if (!branches.contains(name)) throw new IllegalArgumentException("branch does not exist")
-    createOrMoveBranch(name, put(newHead)).state
+    moveBranch(branch(name).get, put(newHead)).state
   }
 
-  private def createOrMoveBranch(name: String, newHead: MetaState): MetaState = {
-    val tip = branches.getOrElseUpdate(name, new Branch(name))
-    val oldHead = tip.head
-    tip.head(newHead)
+  private def moveBranch(branch: Branch, newHead: MetaState): MetaState = {
+    val oldHead = branch.head
+    branch.head(newHead)
 
-    if (_currentBranch.equals(name)) engine.head() = newHead.state
-    if (oldHead == null) fireBranchCreated(this, name, newHead.state)
-    else fireBranchMoved(this, name, oldHead.state, newHead.state)
+    if (_currentBranch == branch) engine.head() = newHead.state
+    fireBranchMoved(this, branch.name, oldHead.state, newHead.state)
 
     oldHead
   }
 
   def execute[T <: Action](action: T): T = {
     engine.execute(action);
-    createOrMoveBranch(_currentBranch, put(engine.head.state))
+    moveBranch(_currentBranch, put(engine.head.state))
     action
   }
 
@@ -326,7 +328,11 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
       //we have all we need
       newHead.addEngine(engine)
 
-      createOrMoveBranch(name, newHead);
+      if (branches.contains(name)) {
+        createBranch(name, newHead.state)
+      } else {
+        moveBranch(branches(name), newHead)
+      }
 
     } else {
       //we need additional states
@@ -364,7 +370,11 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
     if (!newHead.resolve()) throw new AssertionError()
     newHead.addEngine(engine)
 
-    createOrMoveBranch(name, newHead)
+    if (branches.contains(name)) {
+      createBranch(name, newHead.state)
+    } else {
+      moveBranch(branches(name), newHead)
+    }
   }
 
   //send branch sync

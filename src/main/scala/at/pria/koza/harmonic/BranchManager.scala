@@ -67,7 +67,7 @@ object BranchManager {
     def sendMissingCallback(engine: Int, branch: String, state: Long, ancestors: Obj*): Unit = {}
   }
 
-  private[harmonic] class MetaState(mgr: BranchManager, val stateId: Long, val parentId: Long) extends PolybufSerializable with Ref {
+  private[BranchManager] class MetaState(mgr: BranchManager, val stateId: Long, val parentId: Long) extends PolybufSerializable with Ref {
     private var _action: Obj = _
 
     private var _parent: MetaState = _
@@ -173,7 +173,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
     private var _head: MetaState = _
     def head: MetaState = _head
     def head(newHead: State): State = head(put(newHead)).state
-    def head(newHead: MetaState): MetaState = {
+    private[BranchManager] def head(newHead: MetaState): MetaState = {
       val oldHead = _head
       _head = newHead
       if (_currentBranch == this) engine.head() = newHead.state

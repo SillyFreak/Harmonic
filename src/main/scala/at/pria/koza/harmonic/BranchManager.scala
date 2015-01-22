@@ -283,11 +283,6 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
     fireBranchDeleted(this, branch.name, branch.state)
   }
 
-  def branchTip(branch: Branch, newHead: State): State = {
-    if (newHead.engine != engine) throw new IllegalArgumentException("newHead is from another engine")
-    branch.head(newHead)
-  }
-
   def execute[T <: Action](action: T): T = {
     engine.execute(action);
     currentBranch.head(put(engine.head.state))

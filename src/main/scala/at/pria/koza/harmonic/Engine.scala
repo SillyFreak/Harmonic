@@ -175,24 +175,26 @@ class Engine(val id: Int) {
 
       //roll back to pred
       {
-        var current = this.head
-        while (current != pred) {
-          current.asInstanceOf[DerivedState].revert()
-          current = current.parent
+        def rollback(state: State): Unit = {
+          if (state != pred) {
+            state.asInstanceOf[DerivedState].revert()
+            rollback(state.parent)
+          }
         }
+
+        rollback(this.head)
       }
 
       //move forward to new head
       {
-        var states = immutable.List[State]()
-        var current = head
-        while (current != pred) {
-          states = current :: states
-          current = current.parent
+        def forward(state: State): Unit = {
+          if (state != pred) {
+            forward(state.parent)
+            state.asInstanceOf[DerivedState].apply()
+          }
         }
-        states.foreach {
-          _.asInstanceOf[DerivedState].apply()
-        }
+
+        forward(head)
       }
 
       //set new head

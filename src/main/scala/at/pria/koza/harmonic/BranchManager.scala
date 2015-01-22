@@ -177,7 +177,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
       val oldHead = _head
       _head = newHead
       if (_currentBranch == this) engine.head() = newHead.state
-      fireBranchMoved(BranchManager.this, name, oldHead.state, newHead.state)
+      if (oldHead != null) fireBranchMoved(BranchManager.this, name, oldHead.state, newHead.state)
       oldHead
     }
 
@@ -187,10 +187,6 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   }
 
   private val branches = mutable.Map[String, Branch]()
-  private def getOrCreateBranch(name: String): Branch = {
-    val branch = branches.getOrElseUpdate(name, new Branch(name));
-    branch
-  }
   def branchIterator: Iterator[Branch] = branches.values.iterator
   def branch(name: String): Option[Branch] = branches.get(name)
 
@@ -261,14 +257,19 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
 
   //branch mgmt
 
+  private def getOrCreateBranch(name: String): Branch = {
+    val branch = branches.getOrElseUpdate(name, new Branch(name));
+    branch
+  }
+
   def createBranchHere(name: String): Branch =
     createBranch(name, currentBranch.state)
 
   def createBranch(name: String, state: State): Branch = {
-    if (state.engine != engine) throw new IllegalArgumentException("state is from another engine")
     if (branches.contains(name)) throw new IllegalArgumentException("branch already exists")
+    val metaState = put(state)
     val branch = getOrCreateBranch(name)
-    branch.head(put(state))
+    branch.head(metaState)
     fireBranchCreated(this, name, state)
     branch
   }
@@ -460,8 +461,10 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
     }
   }
 
-  private def put(state: State): MetaState =
+  private def put(state: State): MetaState = {
+    if (state.engine != engine) throw new IllegalArgumentException("state is from another engine")
     states.getOrElseUpdate(state.id, new MetaState(this, state))
+  }
 
   //polybuf
 

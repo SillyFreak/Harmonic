@@ -172,7 +172,13 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
   class Branch private[BranchManager] (val name: String) extends Ref {
     private var _head: MetaState = _
     def head: MetaState = _head
-    def head(head: MetaState): Unit = _head = head
+    def head(newHead: State): Unit = head(put(newHead))
+    def head(newHead: MetaState): Unit = {
+      val oldHead = _head
+      _head = newHead
+      if (_currentBranch == this) engine.head() = newHead.state
+      fireBranchMoved(BranchManager.this, name, oldHead.state, newHead.state)
+    }
 
     override def state = head.state
 
@@ -276,21 +282,14 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
     fireBranchDeleted(this, branch.name, branch.state)
   }
 
-  def branchTip(name: String): Option[State] = branches.get(name).map { _.head.state }
-
-  def branchTip(name: String, newHead: State): State = {
+  def branchTip(branch: Branch, newHead: State): State = {
     if (newHead.engine != engine) throw new IllegalArgumentException("newHead is from another engine")
-    if (!branches.contains(name)) throw new IllegalArgumentException("branch does not exist")
-    moveBranch(branch(name).get, put(newHead)).state
+    moveBranch(branch, put(newHead)).state
   }
 
   private def moveBranch(branch: Branch, newHead: MetaState): MetaState = {
     val oldHead = branch.head
     branch.head(newHead)
-
-    if (_currentBranch == branch) engine.head() = newHead.state
-    fireBranchMoved(this, branch.name, oldHead.state, newHead.state)
-
     oldHead
   }
 

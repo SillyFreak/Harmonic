@@ -1,0 +1,12 @@
+package harmonic;
+
+import "at/pria/koza/polybuf/polybuf.proto";
+
+option java_package = "at.pria.koza.harmonic.proto";
+option java_outer_classname = "HarmonicTestP";
+
+message MyActionP {
+	extend polybuf.Obj {
+		optional MyActionP new_game_action = 180;
+	}
+}

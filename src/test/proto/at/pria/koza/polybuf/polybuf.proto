@@ -1,0 +1,26 @@
+package polybuf;
+
+option java_package = "at.pria.koza.polybuf.proto";
+option java_outer_classname = "Polybuf";
+
+message Obj {
+	// The type of the object, which corresponds to the extension number for the type's message.
+	// If (type == 0 && id != 0), this Obj represents a reference to the Obj with that id.
+	// If (type == 0 && id == 0), this Obj represents the null reference.
+	// Types that have one or more supertypes will simply fill out multiple extensions, each
+	// containing only those attributes that belong to that type, not to any super or subtype.
+	// It's the responsibility of the type in the target language to read and write all relevant
+	// supertypes.
+	optional uint32	type_id	= 1 [default = 0];
+	optional uint32	id		= 2 [default = 0];
+	
+	extensions 100 to max;
+}
+
+//  message Example {
+//  	extend Obj {
+//  		optional Example example = 100;
+//  	}
+//  	
+//  	optional string value = 1;
+//  }

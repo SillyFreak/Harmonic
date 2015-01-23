@@ -286,7 +286,7 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
 
   def execute[T <: Action](action: T): T = {
     engine.execute(action);
-    currentBranch.head(put(engine.head.state))
+    currentBranch.head(put(engine.head()))
     action
   }
 

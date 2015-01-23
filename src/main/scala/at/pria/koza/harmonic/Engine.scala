@@ -159,6 +159,8 @@ class Engine(val id: Int) {
     private var head: State = new RootState(Engine.this)
     override def state = head
 
+    def apply() = state
+
     /**
      * <p>
      * Moves this engine's head to the given state.

@@ -278,7 +278,8 @@ class BranchManager(val engine: Engine) extends IOFactory[MetaState] {
     if (branch.state.engine != engine) throw new IllegalArgumentException("branch is from another engine")
     if (_currentBranch == branch) throw new IllegalArgumentException("can't delete curent branch")
     branches.remove(branch.name) match {
-      case None => assert(false)
+      case Some(_) =>
+      case None    => assert(false)
     }
     fireBranchDeleted(this, branch.name, branch.state)
   }

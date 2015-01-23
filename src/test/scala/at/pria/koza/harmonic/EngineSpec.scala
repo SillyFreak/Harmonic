@@ -36,17 +36,31 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
     engine.head() should be(engine.states(0l))
   }
 
-  it should "execute actions properly" in {
+  it should "execute and revert actions properly" in {
     Given("a new engine and its head")
     implicit val engine = new Engine()
-    engine.addIO(MyAction)
     val oldHead = engine.head()
 
-    When("executing an action")
-    engine.execute(new MyAction())
+    And("a PolybufIO for a custom action")
+    engine.addIO(MyAction)
 
-    Then("the new head's parent sould be the old head")
+    When("executing an action that adds an entity")
+    val action = engine.execute(new MyAction())
+
+    Then("the new head's parent should be the old head")
     engine.head().parent should be(oldHead)
+
+    And("the engine should contain the created entity")
+    engine.entities.get(action.entityId) should not be (None)
+
+    When("reverting to the original head")
+    engine.head() = oldHead
+
+    Then("the head should be the original head")
+    engine.head() should be(oldHead)
+
+    And("the engine should not contain the entity any more")
+    engine.entities.get(action.entityId) should be(None)
   }
 
   object MyAction extends IOFactory[MyAction] {
@@ -75,7 +89,14 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
     //PolybufSerializable
     def typeId: Int = MyAction.FIELD
 
-    protected[this] def apply0(): Unit = {}
+    var entityId: Int = _
+
+    protected[this] def apply0(): Unit = {
+      entityId = new MyEntity().id
+    }
   }
 
+  class MyEntity()(implicit engine: Engine) extends Entity {
+    init()
+  }
 }

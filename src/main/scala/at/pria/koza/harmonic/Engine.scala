@@ -232,8 +232,7 @@ class Engine(val id: Int) {
   }
 
   def execute[T <: Action](action: T): T = {
-    val state = new DerivedState(head(), action)
-    head() = state
+    head() = new DerivedState(head(), action)
     action
   }
 

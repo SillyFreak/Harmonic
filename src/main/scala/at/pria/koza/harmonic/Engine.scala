@@ -220,6 +220,8 @@ class Engine(val id: Int) {
   private[harmonic] object wrappers {
     private val map = mutable.Map[Long, StateWrapper]()
 
+    def head: StateWrapper = apply(Engine.this.head().id)
+
     def contains(id: Long): Boolean = states.contains(id)
 
     def getOrElseUpdate(id: Long, wrapper: => StateWrapper): StateWrapper = {

@@ -55,6 +55,9 @@ object Engine {
  * @param id the engine's ID.
  */
 class Engine(val id: Int) {
+  //need to eagerly initialize head
+  head
+
   /**
    * <p>
    * Creates an engine.

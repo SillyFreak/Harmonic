@@ -51,7 +51,7 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
     engine.head().parent should be(oldHead)
 
     And("the engine should contain the created entity")
-    engine.entities.get(action.entityId) should not be (None)
+    engine.entities.get(action.entityId) should not be None
 
     When("reverting to the original head")
     engine.head() = oldHead

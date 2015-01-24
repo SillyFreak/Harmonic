@@ -58,7 +58,6 @@ class StateWrapper private (val stateId: Long, val parentId: Long,
   override def typeId: Int = State.FIELD
 
   //Ref
-  //TODO use lazy?
   lazy override val state: State = {
     engine.states.get(stateId) match {
       case Some(state) =>

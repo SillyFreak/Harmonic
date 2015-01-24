@@ -217,6 +217,20 @@ class Engine(val id: Int) {
       fire(listeners) { _.headMoved(prevHead, newHead) }
   }
 
+  private[harmonic] object wrappers {
+    val map = mutable.Map[Long, StateWrapper]()
+
+    def contains(id: Long): Boolean = states.contains(id)
+
+    def get(id: Long): Option[StateWrapper] = {
+      states.get(id) match {
+        case Some(state) => Some(map.getOrElseUpdate(id, new StateWrapper(state)));
+        case None        => None
+      }
+    }
+    def apply(id: Long): StateWrapper = get(id).get
+  }
+
   def execute[T <: Action](action: T): T = {
     val state = new DerivedState(head(), action)
     head() = state

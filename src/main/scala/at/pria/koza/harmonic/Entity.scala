@@ -18,7 +18,7 @@ import java.io.Serializable
  * @version V1.0 27.07.2013
  * @author SillyFreak
  */
-trait Entity extends Serializable {
+trait Entity {
   private var _engine: Engine = _
   private var _id: Int = _
 

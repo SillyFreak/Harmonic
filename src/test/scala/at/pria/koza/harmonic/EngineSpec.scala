@@ -15,8 +15,8 @@ import at.pria.koza.polybuf.PolybufSerializable
 import at.pria.koza.polybuf.proto.Polybuf.Obj
 
 import org.scalatest.FlatSpec
-import org.scalatest.Matchers
 import org.scalatest.GivenWhenThen
+import org.scalatest.Matchers
 
 import com.google.protobuf.GeneratedMessage.GeneratedExtension
 

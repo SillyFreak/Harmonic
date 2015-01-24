@@ -223,9 +223,17 @@ class Engine(val id: Int) {
     def contains(id: Long): Boolean = states.contains(id)
 
     def get(id: Long): Option[StateWrapper] = {
-      states.get(id) match {
-        case Some(state) => Some(map.getOrElseUpdate(id, new StateWrapper(state)));
-        case None        => None
+      map.get(id) match {
+        case Some(wrapper) =>
+          Some(wrapper)
+        case None => states.get(id) match {
+          case Some(state) =>
+            val wrapper = new StateWrapper(state)
+            map(id) = wrapper
+            Some(wrapper)
+          case None =>
+            None
+        }
       }
     }
     def apply(id: Long): StateWrapper = get(id).get

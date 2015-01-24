@@ -55,7 +55,7 @@ object StateWrapper extends IOFactory[StateWrapper] {
   }
 }
 
-class StateWrapper private (val stateId: Long, val parentId: Long, private var _state: State,
+class StateWrapper private (val stateId: Long, val parentId: Long,
                             private var _action: Obj)(implicit engine: Engine)
     extends PolybufSerializable with Ref {
   //PolybufSerializable
@@ -63,23 +63,17 @@ class StateWrapper private (val stateId: Long, val parentId: Long, private var _
 
   //Ref
   //TODO use lazy?
-  override def state = {
-    if (_state != null) {
-      _state
-    } else {
-      engine.states.get(stateId) match {
-        case Some(state) =>
-          _state = state
-          _state
-        case None =>
-          engine.wrappers.map.get(parentId) match {
-            case Some(parent) =>
-              _state = new DerivedState(parent.state, stateId, _action)
-              _state
-            case None =>
-              throw new IllegalStateException("state not resolvable: State@016X".format(stateId))
-          }
-      }
+  lazy override val state: State = {
+    engine.states.get(stateId) match {
+      case Some(state) =>
+        state
+      case None =>
+        engine.wrappers.map.get(parentId) match {
+          case Some(parent) =>
+            new DerivedState(parent.state, stateId, _action)
+          case None =>
+            throw new IllegalStateException("state not resolvable: State@016X".format(stateId))
+        }
     }
   }
 
@@ -97,11 +91,10 @@ class StateWrapper private (val stateId: Long, val parentId: Long, private var _
         case root: RootState    => 0
         case node: DerivedState => node.parent.id
       },
-      state,
       null)(state.engine)
 
   def this(state: StateP)(implicit engine: Engine) =
-    this(state.getId(), state.getParent(), null, state.getAction())
+    this(state.getId(), state.getParent(), state.getAction())
 
   /**
    * <p>

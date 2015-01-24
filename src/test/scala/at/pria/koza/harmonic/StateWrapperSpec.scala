@@ -81,4 +81,50 @@ class StateWrapperSpec extends FlatSpec with Matchers with GivenWhenThen {
       wrapper.get.state should be(engine.states(id))
     }
   }
+
+  it should "not be resolvable in another engine if the parent is not known" in {
+    val (obj1, id1, obj2, id2) = {
+      Given("one engine with IOs for StateWrapper and MyAction")
+      implicit val engine = new Engine()
+      engine.addIO(StateWrapper)
+      engine.addIO(MyAction)
+
+      And("executing two actions")
+      engine.execute(new MyAction())
+      val wrapper1 = engine.wrappers.head
+      engine.execute(new MyAction())
+      val wrapper2 = engine.wrappers.head
+
+      And("serializing both states")
+      val out = new PolybufOutput(engine.config)
+      (out.writeObject(wrapper1), wrapper1.stateId,
+        out.writeObject(wrapper2), wrapper2.stateId)
+    }
+
+    {
+      When("creating a new engine with IOs for StateWrapper and MyAction")
+      implicit val engine = new Engine()
+      engine.addIO(StateWrapper)
+      engine.addIO(MyAction)
+
+      And("deserializing the second state in that engine")
+      val in = new PolybufInput(engine.config)
+      in.readObject(obj2)
+
+      Then("the wrapper should be available")
+      val wrapper2 = engine.wrappers.get(id2)
+      wrapper2 should not be None
+
+      And("it should *not* be resolvable")
+      intercept[IllegalStateException] {
+        wrapper2.get.state
+      }
+
+      When("deserializing the first state in that engine")
+      in.readObject(obj1)
+
+      Then("the second state should be resolvable")
+      wrapper2.get.state
+    }
+  }
 }

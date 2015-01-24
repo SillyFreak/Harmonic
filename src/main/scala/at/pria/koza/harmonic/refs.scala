@@ -36,7 +36,7 @@ object StateWrapper extends IOFactory[StateWrapper] {
   private class IO(implicit engine: Engine) extends PolybufIO[StateWrapper] {
     private val delegate = State.getIO(engine)
 
-    override def extension: GeneratedExtension[Obj, _] = delegate.extension
+    override val extension: GeneratedExtension[Obj, _] = delegate.extension
 
     @throws[PolybufException]
     override def serialize(out: PolybufOutput, instance: StateWrapper, obj: Obj.Builder): Unit =
@@ -48,10 +48,6 @@ object StateWrapper extends IOFactory[StateWrapper] {
       //handle states already present properly
       engine.wrappers.getOrElseUpdate(id, new StateWrapper(obj))
     }
-
-    @throws[PolybufException]
-    override def deserialize(in: PolybufInput, obj: Obj, instance: StateWrapper): Unit =
-      delegate.deserialize(in, obj, instance.state)
   }
 }
 

@@ -89,7 +89,7 @@ class BranchManager(val engine: Engine) {
   private var _currentBranch = createBranch(BranchManager.BRANCH_DEFAULT, engine.head())
   def currentBranch = _currentBranch
 
-  def currentBranch(branch: Branch): Unit = {
+  def currentBranch_=(branch: Branch): Unit = {
     if (branch.state.engine != engine) throw new IllegalArgumentException("branch is from another engine")
     engine.head() = branch.state
     _currentBranch = branch

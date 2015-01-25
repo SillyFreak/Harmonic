@@ -149,10 +149,8 @@ class BranchManager(val engine: Engine) {
 
   //branch mgmt
 
-  private def getOrCreateBranch(name: String): Branch = {
-    val branch = branches.getOrElseUpdate(name, new Branch(name));
-    branch
-  }
+  private def getOrCreateBranch(name: String): Branch =
+    branches.getOrElseUpdate(name, new Branch(name));
 
   def createBranchHere(name: String): Branch =
     createBranch(name, currentBranch.state)

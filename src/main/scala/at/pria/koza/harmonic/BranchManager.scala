@@ -72,6 +72,7 @@ class BranchManager(val engine: Engine) {
       _head = newHead
       if (_currentBranch == this) engine.head() = newHead.state
       if (oldHead != null) fireBranchMoved(BranchManager.this, name, oldHead.state, newHead.state)
+      else fireBranchCreated(BranchManager.this, name, newHead.state)
       oldHead
     }
 
@@ -160,7 +161,6 @@ class BranchManager(val engine: Engine) {
     val wrapper = engine.wrappers(state.id)
     val branch = getOrCreateBranch(name)
     branch.head(wrapper)
-    fireBranchCreated(this, name, state)
     branch
   }
 

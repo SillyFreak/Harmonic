@@ -65,8 +65,8 @@ object BranchManager {
 class BranchManager(val engine: Engine) {
   class Branch private[BranchManager] (val name: String, private var _head: StateWrapper) extends Ref {
     def head: StateWrapper = _head
-    def head(newHead: State): State = head(engine.Wrappers(newHead.id)).state
-    private[BranchManager] def head(newHead: StateWrapper): StateWrapper = {
+    def head_=(newHead: State): State = (head = engine.Wrappers(newHead.id)).state
+    private[BranchManager] def head_=(newHead: StateWrapper): StateWrapper = {
       val oldHead = _head
       _head = newHead
       if (_currentBranch == this) engine.head = newHead.state
@@ -171,7 +171,7 @@ class BranchManager(val engine: Engine) {
 
   def execute[T <: Action](action: T): T = {
     engine.execute(action);
-    currentBranch.head(engine.headWrapper)
+    currentBranch.head = engine.headWrapper
     action
   }
 

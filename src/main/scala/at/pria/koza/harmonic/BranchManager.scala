@@ -88,7 +88,7 @@ class BranchManager(val engine: Engine) {
   private val branchListeners = mutable.ListBuffer[BranchListener]()
 
   //put the root
-  private var _currentBranch = getOrCreateBranch(BranchManager.BRANCH_DEFAULT)
+  private var _currentBranch = createBranch(BranchManager.BRANCH_DEFAULT, engine.head())
   def currentBranch = _currentBranch
 
   def currentBranch(branch: Branch): Unit = {

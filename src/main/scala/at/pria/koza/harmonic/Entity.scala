@@ -23,7 +23,7 @@ trait Entity {
   private var _id: Int = _
 
   def init()(implicit engine: Engine): Unit =
-    if (_engine == null) engine.entities += this
+    if (_engine == null) engine.Entities += this
 
   /**
    * <p>

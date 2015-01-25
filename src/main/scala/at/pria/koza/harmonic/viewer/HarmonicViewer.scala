@@ -43,13 +43,13 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
   }
 
   def listenTo(engine: Engine): Unit = {
-    engine.states.addListener(Listener)
-    engine.head.addListener(Listener)
-    val it = engine.states.map.values.iterator
+    engine.States.addListener(Listener)
+    engine.Head.addListener(Listener)
+    val it = engine.states.values.iterator
     while (it.hasNext)
       states.resolve(it.next())
 
-    val head = states.resolve(engine.head.state)
+    val head = states.resolve(engine.head)
     head.labels.add("<HEAD>")
     head.fireChanged()
     makeVisible(head)

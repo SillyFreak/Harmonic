@@ -190,7 +190,7 @@ object State extends IOFactory[State] {
 }
 
 sealed abstract class State(val engine: Engine, val id: Long) extends PolybufSerializable with Ref {
-  engine.states += this
+  engine.States += this
 
   //PolybufSerializable
   override def typeId: Int = State.FIELD
@@ -240,7 +240,7 @@ class DerivedState(val parent: State, id: Long, val actionObj: Obj) extends Stat
   def this(parent: State, action: Action) = {
     this(
       parent,
-      parent.engine.states.nextStateId(),
+      parent.engine.States.nextStateId(),
       try {
         new PolybufOutput(parent.engine.config).writeObject(action)
       } catch {

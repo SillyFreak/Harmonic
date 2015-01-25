@@ -55,8 +55,8 @@ object Engine {
  * @param id the engine's ID.
  */
 class Engine(val id: Int) {
-  //need to eagerly initialize head
-  head
+  //need to eagerly initialize Head
+  Head
 
   /**
    * <p>
@@ -85,17 +85,19 @@ class Engine(val id: Int) {
   def getIO(typeID: Int): Option[PolybufIO[_ <: PolybufSerializable]] =
     config.get(typeID)
 
-  object states {
-    private var states = immutable.Map[Long, State]()
-    def map: immutable.Map[Long, State] = states
+  //States convenience members
+  def states: immutable.Map[Long, State] = States.map
 
-    def contains(id: Long): Boolean = states.contains(id)
+  object States {
+    private[Engine] var map = immutable.Map[Long, State]()
+
+    def contains(id: Long): Boolean = map.contains(id)
 
     def get(id: Long): Option[State] = states.get(id)
     def apply(id: Long): State = states(id)
     private def update(id: Long, state: State) = {
       if (contains(id)) throw new IllegalArgumentException("can't redefine a state")
-      states = states.updated(id, state)
+      map = states.updated(id, state)
       fireStateAdded(state)
     }
     private[harmonic] def +=(state: State): Unit = this(state.id) = state
@@ -123,7 +125,7 @@ class Engine(val id: Int) {
       fire(listeners) { _.stateAdded(state) }
   }
 
-  object entities {
+  object Entities {
     private var nextEntityId: Int = 0;
 
     private val entities = mutable.Map[Int, Entity]()
@@ -158,7 +160,11 @@ class Engine(val id: Int) {
     }
   }
 
-  object head extends Ref {
+  //Head convenience members
+  def head = Head()
+  def head_=(head: State) = Head() = head
+
+  object Head extends Ref {
     private var head: State = new RootState(Engine.this)
     override def state = head
 
@@ -217,10 +223,12 @@ class Engine(val id: Int) {
       fire(listeners) { _.headMoved(prevHead, newHead) }
   }
 
-  private[harmonic] object wrappers {
+  def headWrapper = Wrappers.head
+
+  private[harmonic] object Wrappers {
     private val map = mutable.Map[Long, StateWrapper]()
 
-    def head: StateWrapper = apply(Engine.this.head().id)
+    def head: StateWrapper = apply(Engine.this.head.id)
 
     def contains(id: Long): Boolean = states.contains(id)
 
@@ -251,7 +259,7 @@ class Engine(val id: Int) {
   }
 
   def execute[T <: Action](action: T): T = {
-    head() = new DerivedState(head(), action)
+    head = new DerivedState(head, action)
     action
   }
 

@@ -46,7 +46,7 @@ object StateWrapper extends IOFactory[StateWrapper] {
     override def initialize(in: PolybufInput, obj: Obj): StateWrapper = {
       val id = obj.getExtension(State.EXTENSION).getId()
       //handle states already present properly
-      engine.wrappers.getOrElseUpdate(id, new StateWrapper(obj))
+      engine.Wrappers.getOrElseUpdate(id, new StateWrapper(obj))
     }
   }
 }
@@ -63,7 +63,7 @@ class StateWrapper private (val stateId: Long, val parentId: Long,
       case Some(state) =>
         state
       case None =>
-        engine.wrappers.get(parentId) match {
+        engine.Wrappers.get(parentId) match {
           case Some(parent) =>
             new DerivedState(parent.state, stateId, _action)
           case None =>

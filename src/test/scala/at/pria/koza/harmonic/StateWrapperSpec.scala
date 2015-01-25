@@ -30,7 +30,7 @@ class StateWrapperSpec extends FlatSpec with Matchers with GivenWhenThen {
     implicit val engine = new Engine()
     engine.addIO(StateWrapper)
 
-    engine.wrappers.head.state should be(engine.head())
+    engine.headWrapper.state should be(engine.head)
   }
 
   it should "be resolvable if it's wrapping a known derived state" in {
@@ -44,7 +44,7 @@ class StateWrapperSpec extends FlatSpec with Matchers with GivenWhenThen {
     val action = engine.execute(new MyAction())
 
     Then("the new head's wrapper should be resolvable")
-    engine.wrappers.head.state should be(engine.head())
+    engine.headWrapper.state should be(engine.head)
   }
 
   it should "be resolvable in another engine if the parent is known" in {
@@ -56,7 +56,7 @@ class StateWrapperSpec extends FlatSpec with Matchers with GivenWhenThen {
 
       And("executing an action")
       engine.execute(new MyAction())
-      val wrapper = engine.wrappers.head
+      val wrapper = engine.headWrapper
 
       And("serializing the head state")
       val out = new PolybufOutput(engine.config)
@@ -74,7 +74,7 @@ class StateWrapperSpec extends FlatSpec with Matchers with GivenWhenThen {
       in.readObject(obj)
 
       Then("the wrapper should be available")
-      val wrapper = engine.wrappers.get(id)
+      val wrapper = engine.Wrappers.get(id)
       wrapper should not be None
 
       And("it should be resolvable")
@@ -91,9 +91,9 @@ class StateWrapperSpec extends FlatSpec with Matchers with GivenWhenThen {
 
       And("executing two actions")
       engine.execute(new MyAction())
-      val wrapper1 = engine.wrappers.head
+      val wrapper1 = engine.headWrapper
       engine.execute(new MyAction())
-      val wrapper2 = engine.wrappers.head
+      val wrapper2 = engine.headWrapper
 
       And("serializing both states")
       val out = new PolybufOutput(engine.config)
@@ -112,7 +112,7 @@ class StateWrapperSpec extends FlatSpec with Matchers with GivenWhenThen {
       in.readObject(obj2)
 
       Then("the wrapper should be available")
-      val wrapper2 = engine.wrappers.get(id2)
+      val wrapper2 = engine.Wrappers.get(id2)
       wrapper2 should not be None
 
       And("it should *not* be resolvable")

@@ -23,13 +23,13 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
 
   it should "initially have the root state as its head" in {
     implicit val engine = new Engine()
-    engine.head() should be(engine.states(0l))
+    engine.head should be(engine.states(0l))
   }
 
   it should "execute and revert actions properly" in {
     Given("a new engine and its head")
     implicit val engine = new Engine()
-    val oldHead = engine.head()
+    val oldHead = engine.head
 
     And("a PolybufIO for a custom action")
     engine.addIO(MyAction)
@@ -38,18 +38,18 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
     val action = engine.execute(new MyAction())
 
     Then("the new head's parent should be the old head")
-    engine.head().parent should be(oldHead)
+    engine.head.parent should be(oldHead)
 
     And("the engine should contain the created entity")
-    engine.entities.get(action.entityId) should not be None
+    engine.Entities.get(action.entityId) should not be None
 
     When("reverting to the original head")
-    engine.head() = oldHead
+    engine.head = oldHead
 
     Then("the head should be the original head")
-    engine.head() should be(oldHead)
+    engine.head should be(oldHead)
 
     And("the engine should not contain the entity any more")
-    engine.entities.get(action.entityId) should be(None)
+    engine.Entities.get(action.entityId) should be(None)
   }
 }

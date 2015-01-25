@@ -63,16 +63,14 @@ object BranchManager {
  * </p>
  */
 class BranchManager(val engine: Engine) {
-  class Branch private[BranchManager] (val name: String) extends Ref {
-    private var _head: StateWrapper = _
+  class Branch private[BranchManager] (val name: String, private var _head: StateWrapper) extends Ref {
     def head: StateWrapper = _head
     def head(newHead: State): State = head(engine.wrappers(newHead.id)).state
     private[BranchManager] def head(newHead: StateWrapper): StateWrapper = {
       val oldHead = _head
       _head = newHead
       if (_currentBranch == this) engine.head() = newHead.state
-      if (oldHead != null) fireBranchMoved(BranchManager.this, name, oldHead.state, newHead.state)
-      else fireBranchCreated(BranchManager.this, name, newHead.state)
+      fireBranchMoved(BranchManager.this, name, oldHead.state, newHead.state)
       oldHead
     }
 
@@ -155,9 +153,9 @@ class BranchManager(val engine: Engine) {
 
   def createBranch(name: String, state: State): Branch = {
     if (branches.contains(name)) throw new IllegalArgumentException("branch already exists")
-    val branch = new Branch(name)
+    val branch = new Branch(name, engine.wrappers(state.id))
     branches(name) = branch
-    branch.head(engine.wrappers(state.id))
+    fireBranchCreated(this, name, state)
     branch
   }
 

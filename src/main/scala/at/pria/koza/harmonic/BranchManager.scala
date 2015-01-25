@@ -150,17 +150,14 @@ class BranchManager(val engine: Engine) {
 
   //branch mgmt
 
-  private def getOrCreateBranch(name: String): Branch =
-    branches.getOrElseUpdate(name, new Branch(name));
-
   def createBranchHere(name: String): Branch =
     createBranch(name, currentBranch.state)
 
   def createBranch(name: String, state: State): Branch = {
     if (branches.contains(name)) throw new IllegalArgumentException("branch already exists")
-    val wrapper = engine.wrappers(state.id)
-    val branch = getOrCreateBranch(name)
-    branch.head(wrapper)
+    val branch = new Branch(name)
+    branches(name) = branch
+    branch.head(engine.wrappers(state.id))
     branch
   }
 

@@ -31,6 +31,10 @@ dependencies {
     compile 'at.pria.koza:polybuf:0.2.0-SNAPSHOT'
     compile optional('org.jgroups:jgroups:3.2.7.Final')
     testCompile 'org.scalatest:scalatest_2.11:2.2.1'
+    
+    //TODO don't reference the path of the project
+    protobuf fileTree("../polybuf/src/main/proto")
+    testProtobuf fileTree("../polybuf/src/main/proto")
 }
 
 buildscript {

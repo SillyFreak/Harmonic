@@ -223,7 +223,7 @@ class Engine(val id: Int) {
       fire(listeners) { _.headMoved(prevHead, newHead) }
   }
 
-  def headWrapper = Wrappers.head
+  private[harmonic] def headWrapper = Wrappers.head
 
   private[harmonic] object Wrappers {
     private val map = mutable.Map[Long, StateWrapper]()

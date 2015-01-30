@@ -14,7 +14,7 @@ import org.jgroups.JChannel
 import org.jgroups.Message
 import org.jgroups.ReceiverAdapter
 
-import at.pria.koza.harmonic.BranchManager
+import at.pria.koza.harmonic.Engine
 //import at.pria.koza.harmonic.BranchManager.SyncCallback
 import at.pria.koza.harmonic.proto.HarmonicP.SyncP
 import at.pria.koza.harmonic.proto.HarmonicP.SyncP.Type._
@@ -28,7 +28,7 @@ import at.pria.koza.polybuf.proto.Polybuf.Obj
  * @version V0.0 04.08.2013
  * @author SillyFreak
  */
-class JGroupsBranchAdapter(ch: JChannel, mgr: BranchManager) extends ReceiverAdapter {
+class JGroupsBranchAdapter(ch: JChannel, engine: Engine) extends ReceiverAdapter {
   //override def receive(msg: Message): Unit = {
   //  try {
   //    val src = msg.getSrc()

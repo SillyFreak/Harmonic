@@ -26,6 +26,8 @@ import at.pria.koza.polybuf.PolybufSerializable
  * @author SillyFreak
  */
 object Engine {
+  val BRANCH_DEFAULT = "default"
+
   private lazy val random = new Random()
 
   private def nextNonZeroInt(): Int = {
@@ -258,8 +260,82 @@ class Engine(val id: Int) {
     def apply(id: Long): StateWrapper = get(id).get
   }
 
+  object Branches {
+    class Branch private[Branches] (val name: String, private var _head: StateWrapper) extends Ref {
+      def head: StateWrapper = _head
+      def head_=(newHead: State): State = (head = Wrappers(newHead.id)).state
+      private[Engine] def head_=(newHead: StateWrapper): StateWrapper = {
+        val oldHead = _head
+        _head = newHead
+        if (_currentBranch == this) Engine.this.head = newHead.state
+        fireBranchMoved(Engine.this, name, oldHead.state, newHead.state)
+        oldHead
+      }
+
+      override def state = head.state
+
+      override def toString(): String = "%s@%016X".format(name, head.stateId)
+    }
+
+    private val branches = mutable.Map[String, Branch]()
+    def branchIterator: Iterator[Branch] = branches.values.iterator
+    def branch(name: String): Option[Branch] = branches.get(name)
+
+    //put the root
+    private var _currentBranch = createBranch(Engine.BRANCH_DEFAULT, head)
+    def currentBranch = _currentBranch
+
+    def currentBranch_=(branch: Branch): Unit = {
+      if (branch.state.engine != Engine.this) throw new IllegalArgumentException("branch is from another engine")
+      head = branch.state
+      _currentBranch = branch
+    }
+
+    //listeners
+
+    private val listeners = mutable.ListBuffer[BranchListener]()
+
+    def addListener(l: BranchListener): Unit = listeners += l
+    def removeListener(l: BranchListener): Unit = listeners -= l
+
+    private[harmonic] def fireBranchCreated(engine: Engine, branch: String, head: State): Unit =
+      fire(listeners) { _.branchCreated(engine, branch, head) }
+
+    private[harmonic] def fireBranchMoved(engine: Engine, branch: String, prevHead: State, newHead: State): Unit =
+      if (prevHead != newHead)
+        fire(listeners) { _.branchMoved(engine, branch, prevHead, newHead) }
+
+    private[harmonic] def fireBranchDeleted(engine: Engine, branch: String, prevHead: State): Unit =
+      fire(listeners) { _.branchDeleted(engine, branch, prevHead) }
+
+    //branch mgmt
+
+    def createBranchHere(name: String): Branch =
+      createBranch(name, currentBranch.state)
+
+    def createBranch(name: String, state: State): Branch = {
+      if (branches.contains(name)) throw new IllegalArgumentException("branch already exists")
+      val branch = new Branch(name, Wrappers(state.id))
+      branches(name) = branch
+      fireBranchCreated(Engine.this, name, state)
+      branch
+    }
+
+    def deleteBranch(branch: Branch): Unit = {
+      if (branch.state.engine != Engine.this) throw new IllegalArgumentException("branch is from another engine")
+      if (_currentBranch == branch) throw new IllegalArgumentException("can't delete curent branch")
+      branches.remove(branch.name) match {
+        case Some(_) =>
+        case None    => assert(false)
+      }
+      fireBranchDeleted(Engine.this, branch.name, branch.state)
+    }
+  }
+
   def execute[T <: Action](action: T): T = {
     head = new DerivedState(head, action)
+    if (Branches.currentBranch != null)
+      Branches.currentBranch.head = headWrapper
     action
   }
 

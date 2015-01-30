@@ -15,7 +15,6 @@ import javax.swing.JTree
 import javax.swing.tree.TreePath
 
 import at.pria.koza.harmonic.BranchListener
-import at.pria.koza.harmonic.BranchManager
 import at.pria.koza.harmonic.Engine
 import at.pria.koza.harmonic.HeadListener
 import at.pria.koza.harmonic.State
@@ -45,6 +44,7 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
   def listenTo(engine: Engine): Unit = {
     engine.States.addListener(Listener)
     engine.Head.addListener(Listener)
+    engine.Branches.addListener(Listener)
     val it = engine.states.values.iterator
     while (it.hasNext)
       states.resolve(it.next())
@@ -53,13 +53,8 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
     head.labels.add("<HEAD>")
     head.fireChanged()
     makeVisible(head)
-  }
 
-  def listenTo(mgr: BranchManager): Unit = {
-    listenTo(mgr.engine)
-    mgr.addBranchListener(Listener)
-
-    for (branch <- mgr.branchIterator) {
+    for (branch <- engine.Branches.branchIterator) {
       val head = states.resolve(branch.head.state)
       head.labels.add("branch:" + branch.name)
       head.fireChanged()
@@ -84,13 +79,13 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
       makeVisible(node)
     }
 
-    override def branchCreated(mgr: BranchManager, branch: String, head: State): Unit = {
+    override def branchCreated(engine: Engine, branch: String, head: State): Unit = {
       val headNode = states.resolve(head)
       headNode.labels.add("branch:" + branch)
       headNode.fireChanged()
     }
 
-    override def branchMoved(mgr: BranchManager, branch: String, prevHead: State, newHead: State): Unit = {
+    override def branchMoved(engine: Engine, branch: String, prevHead: State, newHead: State): Unit = {
       val prevNode = states.resolve(prevHead)
       prevNode.labels.remove("branch:" + branch)
       prevNode.fireChanged()
@@ -99,7 +94,7 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
       newNode.fireChanged()
     }
 
-    override def branchDeleted(mgr: BranchManager, branch: String, prevHead: State): Unit = {
+    override def branchDeleted(engine: Engine, branch: String, prevHead: State): Unit = {
       val prevNode = states.resolve(prevHead)
       prevNode.labels.remove("branch:" + branch)
       prevNode.fireChanged()

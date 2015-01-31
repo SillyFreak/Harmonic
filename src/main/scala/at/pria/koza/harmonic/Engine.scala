@@ -26,8 +26,6 @@ import at.pria.koza.polybuf.PolybufSerializable
  * @author SillyFreak
  */
 object Engine {
-  val BRANCH_DEFAULT = "default"
-
   private lazy val random = new Random()
 
   private def nextNonZeroInt(): Int = {
@@ -59,7 +57,6 @@ object Engine {
 class Engine(val id: Int) {
   //need to eagerly initialize Head
   Head
-  Branches.currentBranch = Branches.createBranch(Engine.BRANCH_DEFAULT, head)
 
   /**
    * <p>

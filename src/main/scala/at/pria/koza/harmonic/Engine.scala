@@ -188,28 +188,20 @@ class Engine(val id: Int) {
       val pred = this.head.commonPredecessor(head)
 
       //roll back to pred
-      {
-        def rollback(state: State): Unit = {
-          if (state != pred) {
-            state.asInstanceOf[DerivedState].revert()
-            rollback(state.parent)
-          }
+      def rollback(state: State): Unit =
+        if (state != pred) {
+          state.asInstanceOf[DerivedState].revert()
+          rollback(state.parent)
         }
-
-        rollback(this.head)
-      }
+      rollback(this.head)
 
       //move forward to new head
-      {
-        def forward(state: State): Unit = {
-          if (state != pred) {
-            forward(state.parent)
-            state.asInstanceOf[DerivedState].apply()
-          }
+      def forward(state: State): Unit =
+        if (state != pred) {
+          forward(state.parent)
+          state.asInstanceOf[DerivedState].apply()
         }
-
-        forward(head)
-      }
+      forward(head)
 
       //set new head
       val old = this.head
@@ -223,7 +215,8 @@ class Engine(val id: Int) {
     def removeListener(l: HeadListener): Unit = listeners -= l
 
     private[harmonic] def fireHeadMoved(prevHead: State, newHead: State): Unit =
-      fire(listeners) { _.headMoved(prevHead, newHead) }
+      if (prevHead != newHead)
+        fire(listeners) { _.headMoved(prevHead, newHead) }
   }
 
   private[harmonic] def headWrapper = Wrappers.head

@@ -251,6 +251,10 @@ class Engine(val id: Int) {
     def apply(id: Long): StateWrapper = get(id).get
   }
 
+  //Branches convenience members
+  def currentBranch = Branches.currentBranch
+  def currentBranch_=(branch: Branches.Branch) = Branches.currentBranch = branch
+
   object Branches {
     class Branch private[Branches] (val name: String, private var _head: StateWrapper) extends Ref {
       def head: StateWrapper = _head
@@ -302,7 +306,7 @@ class Engine(val id: Int) {
     //branch mgmt
 
     def createBranchHere(name: String): Branch =
-      createBranch(name, currentBranch.state)
+      createBranch(name, head)
 
     def createBranch(name: String, state: State): Branch = {
       if (branches.contains(name)) throw new IllegalArgumentException("branch already exists")

@@ -51,8 +51,9 @@ object StateNode extends IOFactory[StateNode] {
     override def initialize(in: PolybufInput, obj: Obj): StateNode = {
       val p = obj.getExtension(extension)
       engine.states.get(p.getId()) match {
-        case Some(Nil)   => throw new AssertionError("trying to deserialize the root state")
-        case Some(state) => state.head
+        case Some(state) =>
+          if (state.root) throw new AssertionError("trying to deserialize the root state")
+          else state.state
         case None =>
           val node = new StateNode(p.getId(), p.getParent(), p.getAction())
           engine.States += node

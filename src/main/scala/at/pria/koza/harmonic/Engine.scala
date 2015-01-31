@@ -86,7 +86,7 @@ class Engine(val id: Int) {
   def states: immutable.Map[Long, State] = States.map
 
   object States {
-    private[Engine] var map = immutable.Map[Long, State](0l -> Nil)
+    private[Engine] var map = immutable.Map[Long, State](0l -> new State())
 
     def contains(id: Long): Boolean = map.contains(id)
 
@@ -95,8 +95,8 @@ class Engine(val id: Int) {
     private[harmonic] def +=(state: StateNode): State = {
       if (contains(state.id)) throw new IllegalArgumentException("can't redefine a state")
       get(state.parentId) match {
-        case Some(tail) =>
-          val newState = state :: tail
+        case Some(parent) =>
+          val newState = new State(state.id, state :: parent.list)
           map = map.updated(state.id, newState)
           fireStateAdded(newState)
           newState
@@ -168,7 +168,7 @@ class Engine(val id: Int) {
   def head_=(head: State) = Head() = head
 
   object Head {
-    private var head: List[(State, Action)] = (Nil, null) :: Nil
+    private var head: List[(State, Action)] = (states(0l), null) :: Nil
     def state = head.head._1
 
     def apply() = state
@@ -187,12 +187,16 @@ class Engine(val id: Int) {
       val old = state
 
       //common predecessor
-      val pred = commonTail(state, head)
+      val pred =
+        commonTail(state.list, head.list) match {
+          case StateNode(id, _, _) :: _ => id
+          case Nil                      => 0l
+        }
 
       //roll back to pred
       this.head = this.head.dropWhile {
         case (state, action) =>
-          if (state == pred) {
+          if (state.id == pred) {
             false
           } else {
             action.revert()
@@ -202,12 +206,12 @@ class Engine(val id: Int) {
 
       //move forward to new head
       def forward(head: List[(State, Action)], state: State): List[(State, Action)] =
-        if (state == pred) {
+        if (state.id == pred) {
           head
         } else {
           //get the tail first, otherwise deserializing won't work
-          val tail = forward(head, state.tail)
-          val action = state.head.deserializedAction(Engine.this)
+          val tail = forward(head, state.parent)
+          val action = state.state.deserializedAction(Engine.this)
           action.apply()
           (state, action) :: tail
         }
@@ -242,10 +246,7 @@ class Engine(val id: Int) {
       }
 
       override def toString(): String =
-        "%s@%016X".format(name, head match {
-          case state :: _ => state.id
-          case Nil        => 0l
-        })
+        "%s@%016X".format(name, head.id)
     }
 
     private val branches = mutable.Map[String, Branch]()
@@ -302,12 +303,7 @@ class Engine(val id: Int) {
   }
 
   def execute[T <: Action](action: T): T = {
-    val state =
-      new StateNode(States.nextStateId(), head match {
-        case state :: _ => state.id
-        case Nil        => 0l
-      }, action)(this)
-    head = States += state
+    head = States += new StateNode(States.nextStateId(), head.id, action)(this)
     if (Branches.currentBranch != null)
       Branches.currentBranch.head = head
     action

@@ -27,8 +27,5 @@ class StateTreeModel extends DefaultTreeModel(new StateTreeNode()) {
   private val nodes = mutable.Map[Long, StateTreeNode]()
 
   def resolve(state: State): StateTreeNode =
-    nodes.getOrElseUpdate(state match {
-      case state :: _ => state.id
-      case Nil        => 0l
-    }, new StateTreeNode(this, state))
+    nodes.getOrElseUpdate(state.id, new StateTreeNode(this, state))
 }

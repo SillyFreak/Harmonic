@@ -38,7 +38,7 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
     val action = engine.execute(new MyAction())
 
     Then("the new head's parent should be the old head")
-    engine.head.tail should be(oldHead)
+    engine.head.parent should be(oldHead)
 
     And("the engine should contain the created entity")
     engine.Entities.get(action.entityId) should not be None

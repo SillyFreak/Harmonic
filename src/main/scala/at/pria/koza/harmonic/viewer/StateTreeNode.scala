@@ -39,10 +39,8 @@ class StateTreeNode(val state: State, parent: StateTreeNode, source: StateTreeMo
   private[viewer] def this(model: StateTreeModel, state: State) = {
     this(
       state,
-      state match {
-        case _ :: tail => model.resolve(tail)
-        case Nil       => model.getRoot()
-      },
+      if (state.root) model.getRoot()
+      else model.resolve(state.parent),
       model)
     parent.childSeq += this
     source.nodesWereInserted(parent, childIndices)
@@ -60,10 +58,7 @@ class StateTreeNode(val state: State, parent: StateTreeNode, source: StateTreeMo
         else lbl
       }.mkString("{", ", ", "} ")
 
-    sb ++= (state match {
-      case state :: _ => state.toString()
-      case Nil        => "Root"
-    })
+    sb ++= state.toString()
 
     sb.toString()
   }

@@ -52,4 +52,51 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
     And("the engine should not contain the entity any more")
     engine.Entities.get(action.entityId) should be(None)
   }
+
+  it should "handle branches properly" in {
+    Given("an engine")
+    implicit val engine = new Engine()
+
+    And("a PolybufIO for a custom action")
+    engine.addIO(MyAction)
+
+    {
+      When("creating a branch at HEAD")
+      val head = engine.head
+      val branch = engine.Branches.createBranchHere("branch1")
+
+      Then("the branch's tip should be the head")
+      branch.head.state should be(head)
+
+      When("executing an action")
+      engine.execute(new MyAction())
+
+      Then("the branch's tip should still be the old head")
+      branch.head.state should be(head)
+    }
+
+    {
+      When("creating another branch at HEAD")
+      val head = engine.head
+      val branch = engine.Branches.createBranchHere("branch2")
+
+      Then("the branch's tip should be the head")
+      branch.head.state should be(head)
+
+      When("making that branch current")
+      engine.currentBranch = branch
+
+      And("executing an action")
+      engine.execute(new MyAction())
+
+      Then("the branch's tip should be the new head")
+      branch.head.state should be(engine.head)
+
+      When("moving that branch's tip")
+      branch.head = head
+
+      Then("the new head should be the branch's tip")
+      engine.head should be(branch.head.state)
+    }
+  }
 }

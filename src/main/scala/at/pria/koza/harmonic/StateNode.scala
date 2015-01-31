@@ -62,10 +62,7 @@ object StateNode extends IOFactory[StateNode] {
   }
 }
 
-class StateNode private[harmonic] (val id: Long, val parentId: Long, val action: Obj) extends PolybufSerializable {
-  //TODO
-  //engine.States += this
-
+case class StateNode private[harmonic] (val id: Long, val parentId: Long, val action: Obj) extends PolybufSerializable {
   //PolybufSerializable
   override def typeId: Int = StateNode.FIELD
 

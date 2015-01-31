@@ -55,9 +55,6 @@ object Engine {
  * @param id the engine's ID.
  */
 class Engine(val id: Int) {
-  //need to eagerly initialize Head
-  Head
-
   /**
    * <p>
    * Creates an engine.
@@ -89,18 +86,24 @@ class Engine(val id: Int) {
   def states: immutable.Map[Long, State] = States.map
 
   object States {
-    private[Engine] var map = immutable.Map[Long, State]()
+    private[Engine] var map = immutable.Map[Long, State](0l -> Nil)
 
     def contains(id: Long): Boolean = map.contains(id)
 
     def get(id: Long): Option[State] = map.get(id)
     def apply(id: Long): State = map(id)
-    private def update(id: Long, state: State) = {
-      if (contains(id)) throw new IllegalArgumentException("can't redefine a state")
-      map = map.updated(id, state)
-      fireStateAdded(state)
+    private[harmonic] def +=(state: StateNode): State = {
+      if (contains(state.id)) throw new IllegalArgumentException("can't redefine a state")
+      get(state.parentId) match {
+        case Some(tail) =>
+          val newState = state :: tail
+          map = map.updated(state.id, newState)
+          fireStateAdded(newState)
+          newState
+        case None =>
+          throw new IllegalArgumentException("parent state not known in engine")
+      }
     }
-    private[harmonic] def +=(state: State): Unit = this(state.id) = state
 
     private var _nextStateId: Long = (id & 0xFFFFFFFFl) << 32
 
@@ -164,9 +167,9 @@ class Engine(val id: Int) {
   def head = Head()
   def head_=(head: State) = Head() = head
 
-  object Head extends Ref {
-    private var head: State = new RootState(Engine.this)
-    override def state = head
+  object Head {
+    private var head: List[(State, Action)] = (Nil, null) :: Nil
+    def state = head.head._1
 
     def apply() = state
 
@@ -181,29 +184,36 @@ class Engine(val id: Int) {
       if (head == null)
         throw new IllegalArgumentException()
 
+      val old = state
+
       //common predecessor
-      val pred = this.head.commonPredecessor(head)
+      val pred = commonTail(state, head)
 
       //roll back to pred
-      def rollback(state: State): Unit =
-        if (state != pred) {
-          state.asInstanceOf[DerivedState].revert()
-          rollback(state.parent)
-        }
-      rollback(this.head)
+      this.head = this.head.dropWhile {
+        case (state, action) =>
+          if (state == pred) {
+            false
+          } else {
+            action.revert()
+            true
+          }
+      }
 
       //move forward to new head
-      def forward(state: State): Unit =
-        if (state != pred) {
-          forward(state.parent)
-          state.asInstanceOf[DerivedState].apply()
+      def forward(head: List[(State, Action)], state: State): List[(State, Action)] =
+        if (state == pred) {
+          head
+        } else {
+          //get the tail first, otherwise deserializing won't work
+          val tail = forward(head, state.tail)
+          val action = state.head.deserializedAction(Engine.this)
+          action.apply()
+          (state, action) :: tail
         }
-      forward(head)
+      this.head = forward(this.head, head)
 
-      //set new head
-      val old = this.head
-      this.head = head
-      fireHeadMoved(old, this.head)
+      fireHeadMoved(old, state)
     }
 
     private val listeners = mutable.ListBuffer[HeadListener]()
@@ -216,60 +226,26 @@ class Engine(val id: Int) {
         fire(listeners) { _.headMoved(prevHead, newHead) }
   }
 
-  private[harmonic] def headWrapper = Wrappers.head
-
-  private[harmonic] object Wrappers {
-    private val map = mutable.Map[Long, StateWrapper]()
-
-    def head: StateWrapper = apply(Engine.this.head.id)
-
-    def contains(id: Long): Boolean = states.contains(id)
-
-    def getOrElseUpdate(id: Long, wrapper: => StateWrapper): StateWrapper = {
-      map.getOrElseUpdate(id, {
-        states.get(id) match {
-          case Some(state) => new StateWrapper(state)
-          case None        => wrapper
-        }
-      })
-    }
-
-    def get(id: Long): Option[StateWrapper] = {
-      map.get(id) match {
-        case Some(wrapper) =>
-          Some(wrapper)
-        case None => states.get(id) match {
-          case Some(state) =>
-            val wrapper = new StateWrapper(state)
-            map(id) = wrapper
-            Some(wrapper)
-          case None =>
-            None
-        }
-      }
-    }
-    def apply(id: Long): StateWrapper = get(id).get
-  }
-
   //Branches convenience members
   def currentBranch = Branches.currentBranch
   def currentBranch_=(branch: Branches.Branch) = Branches.currentBranch = branch
 
   object Branches {
-    class Branch private[Branches] (val name: String, private var _head: StateWrapper) extends Ref {
-      def head: StateWrapper = _head
-      def head_=(newHead: State): State = (head = Wrappers(newHead.id)).state
-      private[Engine] def head_=(newHead: StateWrapper): StateWrapper = {
+    class Branch private[Branches] (val name: String, private var _head: State) {
+      def head: State = _head
+      def head_=(newHead: State): State = {
         val oldHead = _head
         _head = newHead
-        if (_currentBranch == this) Engine.this.head = newHead.state
-        fireBranchMoved(Engine.this, name, oldHead.state, newHead.state)
+        if (_currentBranch == this) Engine.this.head = newHead
+        fireBranchMoved(Engine.this, name, oldHead, newHead)
         oldHead
       }
 
-      override def state = head.state
-
-      override def toString(): String = "%s@%016X".format(name, head.stateId)
+      override def toString(): String =
+        "%s@%016X".format(name, head match {
+          case state :: _ => state.id
+          case Nil        => 0l
+        })
     }
 
     private val branches = mutable.Map[String, Branch]()
@@ -281,8 +257,7 @@ class Engine(val id: Int) {
     def currentBranch = _currentBranch
 
     def currentBranch_=(branch: Branch): Unit = {
-      if (branch.state.engine != Engine.this) throw new IllegalArgumentException("branch is from another engine")
-      head = branch.state
+      head = branch.head
       _currentBranch = branch
     }
 
@@ -310,27 +285,31 @@ class Engine(val id: Int) {
 
     def createBranch(name: String, state: State): Branch = {
       if (branches.contains(name)) throw new IllegalArgumentException("branch already exists")
-      val branch = new Branch(name, Wrappers(state.id))
+      val branch = new Branch(name, state)
       branches(name) = branch
       fireBranchCreated(Engine.this, name, state)
       branch
     }
 
     def deleteBranch(branch: Branch): Unit = {
-      if (branch.state.engine != Engine.this) throw new IllegalArgumentException("branch is from another engine")
       if (_currentBranch == branch) throw new IllegalArgumentException("can't delete curent branch")
       branches.remove(branch.name) match {
         case Some(_) =>
         case None    => assert(false)
       }
-      fireBranchDeleted(Engine.this, branch.name, branch.state)
+      fireBranchDeleted(Engine.this, branch.name, branch.head)
     }
   }
 
   def execute[T <: Action](action: T): T = {
-    head = new DerivedState(head, action)
+    val state =
+      new StateNode(States.nextStateId(), head match {
+        case state :: _ => state.id
+        case Nil        => 0l
+      }, action)(this)
+    head = States += state
     if (Branches.currentBranch != null)
-      Branches.currentBranch.head = headWrapper
+      Branches.currentBranch.head = head
     action
   }
 

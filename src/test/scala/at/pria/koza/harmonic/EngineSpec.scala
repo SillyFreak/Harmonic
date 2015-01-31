@@ -38,7 +38,7 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
     val action = engine.execute(new MyAction())
 
     Then("the new head's parent should be the old head")
-    engine.head.parent should be(oldHead)
+    engine.head.tail should be(oldHead)
 
     And("the engine should contain the created entity")
     engine.Entities.get(action.entityId) should not be None
@@ -66,13 +66,13 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
       val branch = engine.Branches.createBranchHere("branch1")
 
       Then("the branch's tip should be the head")
-      branch.head.state should be(head)
+      branch.head should be(head)
 
       When("executing an action")
       engine.execute(new MyAction())
 
       Then("the branch's tip should still be the old head")
-      branch.head.state should be(head)
+      branch.head should be(head)
     }
 
     {
@@ -81,7 +81,7 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
       val branch = engine.Branches.createBranchHere("branch2")
 
       Then("the branch's tip should be the head")
-      branch.head.state should be(head)
+      branch.head should be(head)
 
       When("making that branch current")
       engine.currentBranch = branch
@@ -90,13 +90,13 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
       engine.execute(new MyAction())
 
       Then("the branch's tip should be the new head")
-      branch.head.state should be(engine.head)
+      branch.head should be(engine.head)
 
       When("moving that branch's tip")
       branch.head = head
 
       Then("the new head should be the branch's tip")
-      engine.head should be(branch.head.state)
+      engine.head should be(branch.head)
     }
   }
 }

@@ -17,6 +17,8 @@ import scala.util.control.Breaks._
  * @author SillyFreak
  */
 package object harmonic {
+  type State = List[StateNode]
+
   /**
    * <p>
    * Computes and returns the longest common tail of two `Seq`s. For elements contained in both sequences, element

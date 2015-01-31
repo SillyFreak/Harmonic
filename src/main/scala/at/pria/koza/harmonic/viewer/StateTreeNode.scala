@@ -15,8 +15,6 @@ import java.util.List
 import javax.swing.tree.TreeNode
 
 import at.pria.koza.harmonic.State
-import at.pria.koza.harmonic.RootState
-import at.pria.koza.harmonic.DerivedState
 
 /**
  * <p>
@@ -42,8 +40,8 @@ class StateTreeNode(val state: State, parent: StateTreeNode, source: StateTreeMo
     this(
       state,
       state match {
-        case root: RootState    => model.getRoot()
-        case node: DerivedState => model.resolve(node.parent)
+        case _ :: tail => model.resolve(tail)
+        case Nil       => model.getRoot()
       },
       model)
     parent.childSeq += this
@@ -62,10 +60,10 @@ class StateTreeNode(val state: State, parent: StateTreeNode, source: StateTreeMo
         else lbl
       }.mkString("{", ", ", "} ")
 
-    sb ++= {
-      if (state.id == 0l) state.engine.toString()
-      else state.toString()
-    }
+    sb ++= (state match {
+      case state :: _ => state.toString()
+      case Nil        => "Root"
+    })
 
     sb.toString()
   }

@@ -59,6 +59,7 @@ object Engine {
 class Engine(val id: Int) {
   //need to eagerly initialize Head
   Head
+  Branches.currentBranch = Branches.createBranch(Engine.BRANCH_DEFAULT, head)
 
   /**
    * <p>
@@ -282,7 +283,7 @@ class Engine(val id: Int) {
     def branch(name: String): Option[Branch] = branches.get(name)
 
     //put the root
-    private var _currentBranch = createBranch(Engine.BRANCH_DEFAULT, head)
+    private var _currentBranch: Branch = null
     def currentBranch = _currentBranch
 
     def currentBranch_=(branch: Branch): Unit = {

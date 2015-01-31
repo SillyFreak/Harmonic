@@ -1,5 +1,5 @@
 /**
- * StateNode.scala
+ * StateTreeNode.scala
  *
  * Created on 11.08.2013
  */
@@ -20,18 +20,18 @@ import at.pria.koza.harmonic.DerivedState
 
 /**
  * <p>
- * {@code StateNode}
+ * {@code StateTreeNode}
  * </p>
  *
  * @version V0.0 11.08.2013
  * @author SillyFreak
  */
-class StateNode(val state: State, parent: StateNode, source: StateTreeModel) extends AbstractTreeNode[StateNode](parent) {
+class StateTreeNode(val state: State, parent: StateTreeNode, source: StateTreeModel) extends AbstractTreeNode[StateTreeNode](parent) {
   val labels = mutable.SortedSet[String]()
 
   //AbstractTreeNode
 
-  override protected val childSeq = mutable.ListBuffer[StateNode]()
+  override protected val childSeq = mutable.ListBuffer[StateTreeNode]()
 
   //used for fireTreeNodes*
   private val childIndices = if (parent == null) null else Array(parent.childCount)

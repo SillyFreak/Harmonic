@@ -21,11 +21,11 @@ import javax.swing.tree.DefaultTreeModel
  * @author SillyFreak
  */
 @SerialVersionUID(1)
-class StateTreeModel extends DefaultTreeModel(new StateNode()) {
-  override def getRoot(): StateNode = root.asInstanceOf[StateNode]
+class StateTreeModel extends DefaultTreeModel(new StateTreeNode()) {
+  override def getRoot(): StateTreeNode = root.asInstanceOf[StateTreeNode]
 
-  private val nodes = mutable.Map[Long, StateNode]()
+  private val nodes = mutable.Map[Long, StateTreeNode]()
 
-  def resolve(state: State): StateNode =
-    nodes.getOrElseUpdate(state.id, new StateNode(this, state))
+  def resolve(state: State): StateTreeNode =
+    nodes.getOrElseUpdate(state.id, new StateTreeNode(this, state))
 }

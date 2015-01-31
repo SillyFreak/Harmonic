@@ -61,7 +61,7 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
     }
   }
 
-  private def makeVisible(node: StateNode): Unit =
+  private def makeVisible(node: StateTreeNode): Unit =
     statesTree.makeVisible(new TreePath(node.path))
 
   private object Listener extends HeadListener with StateListener with BranchListener {

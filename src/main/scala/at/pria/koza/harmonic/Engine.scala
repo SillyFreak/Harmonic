@@ -93,11 +93,11 @@ class Engine(val id: Int) {
 
     def contains(id: Long): Boolean = map.contains(id)
 
-    def get(id: Long): Option[State] = states.get(id)
-    def apply(id: Long): State = states(id)
+    def get(id: Long): Option[State] = map.get(id)
+    def apply(id: Long): State = map(id)
     private def update(id: Long, state: State) = {
       if (contains(id)) throw new IllegalArgumentException("can't redefine a state")
-      map = states.updated(id, state)
+      map = map.updated(id, state)
       fireStateAdded(state)
     }
     private[harmonic] def +=(state: State): Unit = this(state.id) = state

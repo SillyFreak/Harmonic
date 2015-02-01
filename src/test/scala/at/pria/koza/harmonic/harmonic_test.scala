@@ -42,7 +42,7 @@ class MyAction()(implicit engine: Engine) extends Action with PolybufSerializabl
   //PolybufSerializable
   def typeId: Int = MyAction.FIELD
 
-  var entityId: Int = _
+  var entityId: Int = -1
 
   protected[this] def apply0(): Unit = {
     entityId = new MyEntity().id

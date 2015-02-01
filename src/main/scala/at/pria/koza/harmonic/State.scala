@@ -16,6 +16,7 @@ package at.pria.koza.harmonic
  */
 case class State(val id: Long, val list: List[StateNode]) {
   def root = list.isEmpty
+  def engineId: Int = (id >> 32).toInt
   //these all throw NSEEx's the state is root
   def state = list.head
   def parentId = state.parentId

@@ -16,20 +16,21 @@ package at.pria.koza.harmonic
  * @version V0.0 31.01.2015
  * @author SillyFreak
  */
-case class State private[State] (val id: Long, val list: List[StateNode]) {
-  def root = list.isEmpty
-  def engineId: Int = (id >> 32).toInt
-  //these all throw NSEEx's the state is root
-  def state = list.head
+abstract sealed class State(val id: Long, val list: List[StateNode]) {
+  def root = id == 0l
+  def engineId = (id >> 32).toInt
+  def state: StateNode
+  def parent: State
   def parentId = state.parentId
   def action = state.action
-  lazy val parent = new State(parentId, list.tail)
+}
 
-  def this() = this(0l, Nil)
+case object RootState extends State(0l, Nil) {
+  override def state = throw new NoSuchElementException
+  override def parent = throw new NoSuchElementException
+  override def toString(): String = "Root"
+}
 
-  def this(list: List[StateNode]) = this(list.head.id, list)
-
-  override def toString(): String =
-    if (root) "Root"
-    else state.toString()
+case class DerivedState(override val state: StateNode, override val parent: State) extends State(state.id, state :: parent.list) {
+  override def toString(): String = state.toString()
 }

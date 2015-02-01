@@ -86,7 +86,7 @@ class Engine(val id: Int) {
   def states: immutable.Map[Long, State] = States.map
 
   object States {
-    private[Engine] var map = immutable.Map[Long, State](0l -> new State())
+    private[Engine] var map = immutable.Map[Long, State](0l -> RootState)
 
     def contains(id: Long): Boolean = map.contains(id)
 
@@ -96,7 +96,7 @@ class Engine(val id: Int) {
       if (contains(state.id)) throw new IllegalArgumentException("can't redefine a state")
       get(state.parentId) match {
         case Some(parent) =>
-          val newState = new State(state :: parent.list)
+          val newState = DerivedState(state, parent)
           map = map.updated(state.id, newState)
           fireStateAdded(newState)
           newState

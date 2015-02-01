@@ -168,7 +168,7 @@ class Engine(val id: Int) {
   def head_=(head: State) = Head() = head
 
   object Head {
-    private var head: List[(State, Action)] = (states(0l), null) :: Nil
+    private[Engine] var head: List[(State, Action)] = (states(0l), null) :: Nil
     def state = head.head._1
 
     def apply() = state
@@ -306,7 +306,7 @@ class Engine(val id: Int) {
     head = States += new StateNode(States.nextStateId(), head.id, action)(this)
     if (Branches.currentBranch != null)
       Branches.currentBranch.tip = head
-    action
+    Head.head.head._2.asInstanceOf[T]
   }
 
   override def toString(): String = "%s@%08X".format(getClass().getSimpleName(), id)

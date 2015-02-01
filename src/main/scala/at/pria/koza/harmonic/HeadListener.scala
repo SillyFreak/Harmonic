@@ -10,7 +10,7 @@ import java.util.EventListener
 
 /**
  * <p>
- * `HeadListener` provides a listener interface that can be used to detect when an engine's head is moved.
+ * `HeadListener`s listen to an engine's head being moved.
  * </p>
  *
  * @version V1.0 07.08.2013
@@ -19,7 +19,7 @@ import java.util.EventListener
 trait HeadListener extends EventListener {
   /**
    * <p>
-   * Called when an engine's head is moved via `Engine.setHead(State)`.
+   * Called when an engine's head is moved.
    * </p>
    *
    * @param prevHead the engine's head previous to the move

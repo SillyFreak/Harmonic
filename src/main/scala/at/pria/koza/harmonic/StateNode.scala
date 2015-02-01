@@ -113,23 +113,4 @@ case class StateNode private[harmonic] (val id: Long, val parentId: Long, val ac
     }
 
   override def toString(): String = "%s@%016X".format(getClass().getSimpleName(), id)
-
-  ///**
-  // * <p>
-  // * Computes and returns the nearest common predecessor between this and another state. More formally, this
-  // * returns the state that is a predecessor of both `this` and `other`, but whose children are not.
-  // * </p>
-  // * <p>
-  // * This method may return the root state of the engine, but never `null`.
-  // * </p>
-  // *
-  // * @param other the other state for which to find the nearest common predecessor
-  // * @return the nearest common predecessor state
-  // * @see <a href="http://twistedoakstudios.com/blog/Post3280__">Algorithm source</a>
-  // */
-  //def commonPredecessor(other: State): State = {
-  //  if (engine != other.engine) throw new IllegalArgumentException()
-  //  //the root state is shared in an engine, so ???.head is safe
-  //  else State.commonTail(this.seq, other.seq).head
-  //}
 }

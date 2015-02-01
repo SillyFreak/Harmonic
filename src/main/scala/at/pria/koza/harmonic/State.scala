@@ -16,7 +16,7 @@ package at.pria.koza.harmonic
  * @version V0.0 31.01.2015
  * @author SillyFreak
  */
-case class State(val id: Long, val list: List[StateNode]) {
+case class State private[State] (val id: Long, val list: List[StateNode]) {
   def root = list.isEmpty
   def engineId: Int = (id >> 32).toInt
   //these all throw NSEEx's the state is root
@@ -26,6 +26,8 @@ case class State(val id: Long, val list: List[StateNode]) {
   lazy val parent = new State(parentId, list.tail)
 
   def this() = this(0l, Nil)
+
+  def this(list: List[StateNode]) = this(list.head.id, list)
 
   override def toString(): String =
     if (root) "Root"

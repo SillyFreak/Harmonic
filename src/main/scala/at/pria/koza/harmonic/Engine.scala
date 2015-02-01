@@ -96,7 +96,7 @@ class Engine(val id: Int) {
       if (contains(state.id)) throw new IllegalArgumentException("can't redefine a state")
       get(state.parentId) match {
         case Some(parent) =>
-          val newState = new State(state.id, state :: parent.list)
+          val newState = new State(state :: parent.list)
           map = map.updated(state.id, newState)
           fireStateAdded(newState)
           newState

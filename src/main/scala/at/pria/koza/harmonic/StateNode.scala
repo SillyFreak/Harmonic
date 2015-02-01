@@ -65,9 +65,10 @@ object StateNode extends IOFactory[StateNode] {
 
 /**
  * <p>
- * The `StateNode` class represents one node in an engine's history. It is typically accessed through `State`,
- * which also allows accessing the parent state directly, while StateNode only exposes the parent's ID. Informally,
- * "state" can refer to both a `State` and a `StateNode`.
+ * The `StateNode` class represents one node in an engine's history. `StateNode` is the abstraction used to
+ * serialize states. It is typically accessed through `State` in applications, which also allows accessing the
+ * parent state directly, while StateNode only exposes the parent's ID. Informally, "state" can refer to both a
+ * `State` and a `StateNode`.
  * </p>
  *
  * @version V1.0 31.01.2015

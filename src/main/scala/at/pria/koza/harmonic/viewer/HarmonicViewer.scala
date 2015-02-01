@@ -55,9 +55,9 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
     makeVisible(head)
 
     for (branch <- engine.Branches.branchIterator) {
-      val head = states.resolve(branch.head)
-      head.labels.add("branch:" + branch.name)
-      head.fireChanged()
+      val tip = states.resolve(branch.tip)
+      tip.labels.add("branch:" + branch.name)
+      tip.fireChanged()
     }
   }
 
@@ -79,25 +79,25 @@ class HarmonicViewer extends JPanel(new BorderLayout()) {
       makeVisible(node)
     }
 
-    override def branchCreated(engine: Engine, branch: String, head: State): Unit = {
-      val headNode = states.resolve(head)
-      headNode.labels.add("branch:" + branch)
-      headNode.fireChanged()
+    override def branchCreated(engine: Engine, branch: String, tip: State): Unit = {
+      val node = states.resolve(tip)
+      node.labels.add("branch:" + branch)
+      node.fireChanged()
     }
 
-    override def branchMoved(engine: Engine, branch: String, prevHead: State, newHead: State): Unit = {
-      val prevNode = states.resolve(prevHead)
+    override def branchMoved(engine: Engine, branch: String, prevTip: State, newTip: State): Unit = {
+      val prevNode = states.resolve(prevTip)
       prevNode.labels.remove("branch:" + branch)
       prevNode.fireChanged()
-      val newNode = states.resolve(newHead)
+      val newNode = states.resolve(newTip)
       newNode.labels.add("branch:" + branch)
       newNode.fireChanged()
     }
 
-    override def branchDeleted(engine: Engine, branch: String, prevHead: State): Unit = {
-      val prevNode = states.resolve(prevHead)
-      prevNode.labels.remove("branch:" + branch)
-      prevNode.fireChanged()
+    override def branchDeleted(engine: Engine, branch: String, tip: State): Unit = {
+      val node = states.resolve(tip)
+      node.labels.remove("branch:" + branch)
+      node.fireChanged()
     }
   }
 }

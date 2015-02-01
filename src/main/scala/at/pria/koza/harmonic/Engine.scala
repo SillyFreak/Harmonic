@@ -235,14 +235,14 @@ class Engine(val id: Int) {
   def currentBranch_=(branch: Branches.Branch) = Branches.currentBranch = branch
 
   object Branches {
-    class Branch private[Branches] (val name: String, private var _head: State) {
-      def head: State = _head
-      def head_=(newHead: State): State = {
-        val oldHead = _head
-        _head = newHead
-        if (_currentBranch == this) Engine.this.head = newHead
-        fireBranchMoved(Engine.this, name, oldHead, newHead)
-        oldHead
+    class Branch private[Branches] (val name: String, private var _tip: State) {
+      def tip: State = _tip
+      def tip_=(newTip: State): State = {
+        val oldTip = _tip
+        _tip = newTip
+        if (_currentBranch == this) Engine.this.head = newTip
+        fireBranchMoved(Engine.this, name, oldTip, newTip)
+        oldTip
       }
 
       override def toString(): String =
@@ -258,7 +258,7 @@ class Engine(val id: Int) {
     def currentBranch = _currentBranch
 
     def currentBranch_=(branch: Branch): Unit = {
-      head = branch.head
+      head = branch.tip
       _currentBranch = branch
     }
 
@@ -269,26 +269,26 @@ class Engine(val id: Int) {
     def addListener(l: BranchListener): Unit = listeners += l
     def removeListener(l: BranchListener): Unit = listeners -= l
 
-    private[harmonic] def fireBranchCreated(engine: Engine, branch: String, head: State): Unit =
-      fire(listeners) { _.branchCreated(engine, branch, head) }
+    private[harmonic] def fireBranchCreated(engine: Engine, branch: String, tip: State): Unit =
+      fire(listeners) { _.branchCreated(engine, branch, tip) }
 
-    private[harmonic] def fireBranchMoved(engine: Engine, branch: String, prevHead: State, newHead: State): Unit =
-      if (prevHead != newHead)
-        fire(listeners) { _.branchMoved(engine, branch, prevHead, newHead) }
+    private[harmonic] def fireBranchMoved(engine: Engine, branch: String, prevTip: State, newTip: State): Unit =
+      if (prevTip != newTip)
+        fire(listeners) { _.branchMoved(engine, branch, prevTip, newTip) }
 
-    private[harmonic] def fireBranchDeleted(engine: Engine, branch: String, prevHead: State): Unit =
-      fire(listeners) { _.branchDeleted(engine, branch, prevHead) }
+    private[harmonic] def fireBranchDeleted(engine: Engine, branch: String, tip: State): Unit =
+      fire(listeners) { _.branchDeleted(engine, branch, tip) }
 
     //branch mgmt
 
     def createBranchHere(name: String): Branch =
       createBranch(name, head)
 
-    def createBranch(name: String, state: State): Branch = {
+    def createBranch(name: String, tip: State): Branch = {
       if (branches.contains(name)) throw new IllegalArgumentException("branch already exists")
-      val branch = new Branch(name, state)
+      val branch = new Branch(name, tip)
       branches(name) = branch
-      fireBranchCreated(Engine.this, name, state)
+      fireBranchCreated(Engine.this, name, tip)
       branch
     }
 
@@ -298,14 +298,14 @@ class Engine(val id: Int) {
         case Some(_) =>
         case None    => assert(false)
       }
-      fireBranchDeleted(Engine.this, branch.name, branch.head)
+      fireBranchDeleted(Engine.this, branch.name, branch.tip)
     }
   }
 
   def execute[T <: Action](action: T): T = {
     head = States += new StateNode(States.nextStateId(), head.id, action)(this)
     if (Branches.currentBranch != null)
-      Branches.currentBranch.head = head
+      Branches.currentBranch.tip = head
     action
   }
 

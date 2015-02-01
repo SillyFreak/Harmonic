@@ -66,13 +66,13 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
       val branch = engine.Branches.createBranchHere("branch1")
 
       Then("the branch's tip should be the head")
-      branch.head should be(head)
+      branch.tip should be(head)
 
       When("executing an action")
       engine.execute(new MyAction())
 
       Then("the branch's tip should still be the old head")
-      branch.head should be(head)
+      branch.tip should be(head)
     }
 
     {
@@ -81,7 +81,7 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
       val branch = engine.Branches.createBranchHere("branch2")
 
       Then("the branch's tip should be the head")
-      branch.head should be(head)
+      branch.tip should be(head)
 
       When("making that branch current")
       engine.currentBranch = branch
@@ -90,13 +90,13 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
       engine.execute(new MyAction())
 
       Then("the branch's tip should be the new head")
-      branch.head should be(engine.head)
+      branch.tip should be(engine.head)
 
       When("moving that branch's tip")
-      branch.head = head
+      branch.tip = head
 
       Then("the new head should be the branch's tip")
-      engine.head should be(branch.head)
+      engine.head should be(branch.tip)
     }
   }
 }

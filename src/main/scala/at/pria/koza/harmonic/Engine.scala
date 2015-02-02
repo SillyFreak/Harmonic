@@ -93,7 +93,7 @@ class Engine(val id: Int) {
     def get(id: Long): Option[State] = map.get(id)
     def apply(id: Long): State = map(id)
     private[harmonic] def +=(state: StateNode): State = {
-      if (contains(state.id)) throw new IllegalArgumentException("can't redefine a state")
+      if (contains(state.id)) throw new IllegalArgumentException("can't redefine a state: " + state)
       get(state.parentId) match {
         case Some(parent) =>
           val newState = DerivedState(state, parent)

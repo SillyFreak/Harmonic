@@ -84,7 +84,22 @@ class LocalEngineSpec extends FlatSpec with Matchers with GivenWhenThen {
       remote.download("master")
     }
 
-    Then("the first engine should contain the received state")
+    Then("the first engine should contain the received states")
     engine1.states.get(master.tip.id) should not be None
+
+    When("creating a branch in the first engine")
+    val master2 = engine1.Branches.createBranchHere("master")
+
+    And("setting it to track the remote branch")
+    master2.tracking = (remote, "master")
+
+    Then("the branch should be at the engine's head")
+    master2.tip should be(engine1.head)
+
+    When("updating that branch")
+    master2.update()
+
+    Then("the branch should be at the remote branch's tip")
+    master2.tip.id should be(master.tip.id)
   }
 }

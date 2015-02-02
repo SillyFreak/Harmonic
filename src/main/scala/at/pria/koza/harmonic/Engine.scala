@@ -245,6 +245,14 @@ class Engine(val id: Int) {
         oldTip
       }
 
+      var tracking: (RemoteEngine, String) = null
+
+      def update(): Unit =
+        tracking match {
+          case null             => throw new IllegalStateException("branch is not tracking a remote branch")
+          case (remote, branch) => tip = states(remote.heads(branch))
+        }
+
       override def toString(): String =
         "%s@%016X".format(name, head.id)
     }

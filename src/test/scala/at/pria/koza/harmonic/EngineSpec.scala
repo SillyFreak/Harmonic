@@ -92,11 +92,19 @@ class EngineSpec extends FlatSpec with Matchers with GivenWhenThen {
       Then("the branch's tip should be the new head")
       branch.tip should be(engine.head)
 
+      val newHead = branch.tip
+
       When("moving that branch's tip")
       branch.tip = head
 
       Then("the new head should be the branch's tip")
       engine.head should be(branch.tip)
+
+      When("moving the head")
+      engine.head = newHead
+
+      Then("the branch's tip should be the new head")
+      branch.tip should be(engine.head)
     }
   }
 }

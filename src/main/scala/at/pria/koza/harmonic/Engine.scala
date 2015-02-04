@@ -181,6 +181,11 @@ class Engine(val id: Int) {
      * @param head the engine's new head state
      */
     def update(head: State): Unit = {
+      if (Branches.currentBranch != null) Branches.currentBranch.tip = head
+      else update0(head)
+    }
+
+    private[Engine] def update0(head: State): Unit = {
       if (head == null)
         throw new IllegalArgumentException()
 
@@ -240,7 +245,7 @@ class Engine(val id: Int) {
       def tip_=(newTip: State): State = {
         val oldTip = _tip
         _tip = newTip
-        if (_currentBranch == this) Engine.this.head = newTip
+        if (_currentBranch == this) Head.update0(newTip)
         fireBranchMoved(Engine.this, name, oldTip, newTip)
         oldTip
       }
@@ -266,8 +271,8 @@ class Engine(val id: Int) {
     def currentBranch = _currentBranch
 
     def currentBranch_=(branch: Branch): Unit = {
-      head = branch.tip
       _currentBranch = branch
+      Head.update0(branch.tip)
     }
 
     //listeners
@@ -312,8 +317,6 @@ class Engine(val id: Int) {
 
   def execute[T <: Action](action: T): T = {
     head = States += new StateNode(States.nextStateId(), head.id, action)(this)
-    if (Branches.currentBranch != null)
-      Branches.currentBranch.tip = head
     Head.head.head._2.asInstanceOf[T]
   }
 

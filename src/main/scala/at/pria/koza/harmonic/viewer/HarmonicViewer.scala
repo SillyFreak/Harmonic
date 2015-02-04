@@ -6,19 +6,32 @@
 
 package at.pria.koza.harmonic.viewer
 
-import java.awt.BorderLayout
-import java.awt.Dimension
+import scala.collection.mutable
+import scala.language.implicitConversions
 
+import java.awt.BorderLayout
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JTree
-import javax.swing.tree.TreePath
+import javax.swing.tree.DefaultMutableTreeNode
+import javax.swing.tree.DefaultTreeModel
 
 import at.pria.koza.harmonic.BranchListener
 import at.pria.koza.harmonic.Engine
 import at.pria.koza.harmonic.HeadListener
 import at.pria.koza.harmonic.State
 import at.pria.koza.harmonic.StateListener
+import at.pria.koza.harmonic.viewer.HarmonicViewer._
+
+private object HarmonicViewer {
+  @inline implicit def payload(x: DefaultMutableTreeNode): Payload = x.getUserObject().asInstanceOf[Payload]
+
+  class Payload(val state: State) {
+    val labels = mutable.SortedSet[String]()
+    override def toString(): String =
+      state.toString() + (if (labels.isEmpty) "" else labels.mkString(": ", ", ", ""))
+  }
+}
 
 /**
  * <p>
@@ -30,74 +43,80 @@ import at.pria.koza.harmonic.StateListener
  */
 @SerialVersionUID(1)
 class HarmonicViewer extends JPanel(new BorderLayout()) {
-  private val states = new StateTreeModel()
+  private val root = new DefaultMutableTreeNode()
+  private val states = new DefaultTreeModel(root)
   private val statesTree = new JTree(states)
 
-  statesTree.setRootVisible(false)
+  //TODO when automatically showing new states works, this can be set to false again
+  statesTree.setRootVisible(true)
+  add(new JScrollPane(statesTree))
 
-  {
-    val statesTreePanel = new JPanel(new BorderLayout())
-    statesTreePanel.add(new JScrollPane(statesTree))
-    add(statesTreePanel)
-  }
+  private val nodes = mutable.Map[Long, DefaultMutableTreeNode]()
+  def resolve(state: State): DefaultMutableTreeNode =
+    nodes.getOrElseUpdate(state.id, {
+      val parent = if (state.root) root else resolve(state.parent)
+      val node = new DefaultMutableTreeNode(new Payload(state))
+      states.insertNodeInto(node, parent, parent.getChildCount())
+      node
+    })
 
   def listenTo(engine: Engine): Unit = {
     engine.States.addListener(Listener)
     engine.Head.addListener(Listener)
     engine.Branches.addListener(Listener)
-    val it = engine.states.values.iterator
-    while (it.hasNext)
-      states.resolve(it.next())
 
-    val head = states.resolve(engine.head)
-    head.labels.add("<HEAD>")
-    head.fireChanged()
+    for (state <- engine.states.values)
+      resolve(state)
+
+    val head = resolve(engine.head)
+    head.labels += "<HEAD>"
+    states.nodeChanged(head)
     makeVisible(head)
 
     for (branch <- engine.Branches.branchIterator) {
-      val tip = states.resolve(branch.tip)
-      tip.labels.add("branch:" + branch.name)
-      tip.fireChanged()
+      val tip = resolve(branch.tip)
+      head.labels += "branch:" + branch.name
+      states.nodeChanged(tip)
     }
   }
 
-  private def makeVisible(node: StateTreeNode): Unit =
-    statesTree.makeVisible(new TreePath(node.path))
+  //TODO
+  private def makeVisible(node: DefaultMutableTreeNode): Unit = ()
 
   private object Listener extends HeadListener with StateListener with BranchListener {
     override def headMoved(prevHead: State, newHead: State): Unit = {
-      val prevNode = states.resolve(prevHead)
-      prevNode.labels.remove("<HEAD>")
-      prevNode.fireChanged()
-      val newNode = states.resolve(newHead)
-      newNode.labels.add("<HEAD>")
-      newNode.fireChanged()
+      val prevNode = resolve(prevHead)
+      prevNode.labels -= "<HEAD>"
+      states.nodeChanged(prevNode)
+      val newNode = resolve(newHead)
+      newNode.labels += "<HEAD>"
+      states.nodeChanged(newNode)
     }
 
     override def stateAdded(state: State): Unit = {
-      val node = states.resolve(state)
+      val node = resolve(state)
       makeVisible(node)
     }
 
     override def branchCreated(engine: Engine, branch: String, tip: State): Unit = {
-      val node = states.resolve(tip)
-      node.labels.add("branch:" + branch)
-      node.fireChanged()
+      val node = resolve(tip)
+      node.labels += "branch:" + branch
+      states.nodeChanged(node)
     }
 
     override def branchMoved(engine: Engine, branch: String, prevTip: State, newTip: State): Unit = {
-      val prevNode = states.resolve(prevTip)
-      prevNode.labels.remove("branch:" + branch)
-      prevNode.fireChanged()
-      val newNode = states.resolve(newTip)
-      newNode.labels.add("branch:" + branch)
-      newNode.fireChanged()
+      val prevNode = resolve(prevTip)
+      prevNode.labels -= "branch:" + branch
+      states.nodeChanged(prevNode)
+      val newNode = resolve(newTip)
+      newNode.labels += "branch:" + branch
+      states.nodeChanged(newNode)
     }
 
     override def branchDeleted(engine: Engine, branch: String, tip: State): Unit = {
-      val node = states.resolve(tip)
-      node.labels.remove("branch:" + branch)
-      node.fireChanged()
+      val node = resolve(tip)
+      node.labels -= "branch:" + branch
+      states.nodeChanged(node)
     }
   }
 }

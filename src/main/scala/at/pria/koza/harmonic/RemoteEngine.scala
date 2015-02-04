@@ -59,7 +59,7 @@ trait RemoteEngine {
    * TODO not implemented
    */
   @throws[IOException]
-  def push(heads: Map[String, Long]): Unit
+  def push(heads: Map[String, Long]): Unit = ???
 
   /**
    * Retrieves a map of head IDs from the remote engine. The remote may choose to only send some of its heads, or

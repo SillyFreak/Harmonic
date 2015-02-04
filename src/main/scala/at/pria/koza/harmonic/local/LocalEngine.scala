@@ -28,8 +28,6 @@ class LocalEngine(val engine: Engine) extends RemoteEngine {
   private var _heads = Map[String, Long]()
   override def heads = _heads
 
-  override def push(heads: Map[String, Long]): Unit = ???
-
   override def fetch(): Map[String, Long] = {
     _heads = Map[String, Long](engine.Branches.branchIterator.map { x => x.name -> x.tip.id }.toSeq: _*)
     heads

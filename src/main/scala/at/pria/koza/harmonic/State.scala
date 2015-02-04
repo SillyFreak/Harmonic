@@ -23,14 +23,12 @@ abstract sealed class State(val id: Long, val list: List[StateNode]) {
   def parent: State
   def parentId = state.parentId
   def action = state.action
+  override def toString(): String = "State@%016X".format(id)
 }
 
 case object RootState extends State(0l, Nil) {
   override def state = throw new NoSuchElementException
   override def parent = throw new NoSuchElementException
-  override def toString(): String = "Root"
 }
 
-case class DerivedState(override val state: StateNode, override val parent: State) extends State(state.id, state :: parent.list) {
-  override def toString(): String = state.toString()
-}
+case class DerivedState(override val state: StateNode, override val parent: State) extends State(state.id, state :: parent.list)

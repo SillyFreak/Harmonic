@@ -6,12 +6,14 @@
 
 package at.pria.koza.harmonic
 
+import scala.collection.mutable
 import scala.util.control.Breaks._
 
 import at.pria.koza.polybuf.RemoteEngineException
 import at.pria.koza.polybuf.proto.Polybuf.Obj
 
 import java.io.IOException
+import java.util.EventListener
 
 /**
  * <p>
@@ -55,7 +57,22 @@ import java.io.IOException
 trait RemoteEngine {
   private var _heads = Map[String, Long]()
   def heads = _heads
-  protected[this] def heads_=(newHeads: Map[String, Long]) = _heads = newHeads
+  protected[this] def heads_=(newHeads: Map[String, Long]) = {
+    val oldHeads = _heads
+    _heads = newHeads
+    fireHeadsUpdated(this, oldHeads, newHeads)
+  }
+
+  private val listeners = mutable.ListBuffer[RemoteEngineListener]()
+
+  private def fire[T <: EventListener, U](listeners: Seq[T])(action: T => U): Unit =
+    listeners.synchronized { listeners.reverseIterator.foreach(action) }
+
+  def addListener(l: RemoteEngineListener): Unit = listeners += l
+  def removeListener(l: RemoteEngineListener): Unit = listeners -= l
+
+  private[harmonic] def fireHeadsUpdated(remote: RemoteEngine, oldHeads: Map[String, Long], newHeads: Map[String, Long]): Unit =
+    fire(listeners) { _.headsUpdated(remote, oldHeads, newHeads) }
 
   /**
    * TODO not implemented

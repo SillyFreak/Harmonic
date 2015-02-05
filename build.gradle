@@ -34,8 +34,10 @@ dependencies {
     
     //TODO don't reference the path of the project
     protobuf fileTree("../polybuf/src/main/proto")
-    testProtobuf fileTree("../polybuf/src/main/proto")
 }
+
+generateTestProto.include("src/main/proto")
+generateTestProto.include("build/extracted-protos/main")
 
 buildscript {
     repositories {

@@ -53,7 +53,9 @@ import java.io.IOException
  * @author SillyFreak
  */
 trait RemoteEngine {
-  def heads: Map[String, Long]
+  private var _heads = Map[String, Long]()
+  def heads = _heads
+  protected[this] def heads_=(newHeads: Map[String, Long]) = _heads = newHeads
 
   /**
    * TODO not implemented

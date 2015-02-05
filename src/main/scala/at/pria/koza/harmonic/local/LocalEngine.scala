@@ -25,11 +25,8 @@ import at.pria.koza.polybuf.proto.Polybuf.Obj
  * @author SillyFreak
  */
 class LocalEngine(val engine: Engine) extends RemoteEngine {
-  private var _heads = Map[String, Long]()
-  override def heads = _heads
-
   override def fetch(): Map[String, Long] = {
-    _heads = Map[String, Long](engine.Branches.branchIterator.map { x => x.name -> x.tip.id }.toSeq: _*)
+    heads = Map[String, Long](engine.Branches.branchIterator.map { x => x.name -> x.tip.id }.toSeq: _*)
     heads
   }
 

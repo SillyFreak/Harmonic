@@ -3,7 +3,7 @@ apply from: project.file('gradle/ide.gradle')
 apply from: project.file('gradle/package.gradle')
 apply from: project.file('gradle/GitVersion.gradle')
 apply from: project.file('gradle/maven.gradle')
-apply plugin: 'protobuf'
+apply from: project.file('gradle/proto.gradle')
 
 sourceCompatibility = '1.7'
 targetCompatibility = '1.7'
@@ -35,9 +35,6 @@ dependencies {
     //TODO don't reference the path of the project
     protobuf fileTree("../polybuf/src/main/proto")
 }
-
-generateTestProto.include("src/main/proto")
-generateTestProto.include("build/extracted-protos/main")
 
 buildscript {
     repositories {

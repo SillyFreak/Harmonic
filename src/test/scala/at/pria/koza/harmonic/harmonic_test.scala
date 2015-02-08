@@ -22,7 +22,7 @@ object MyAction extends IOFactory[MyAction] {
 
   def getIO(implicit engine: Engine): PolybufIO[MyAction] = new IO()
 
-  private class IO()(implicit engine: Engine) extends PolybufIO[MyAction] {
+  private class IO(implicit engine: Engine) extends PolybufIO[MyAction] {
     override def extension: GeneratedExtension[Obj, MyActionP] = EXTENSION
 
     @throws[PolybufException]
@@ -38,7 +38,7 @@ object MyAction extends IOFactory[MyAction] {
   }
 }
 
-class MyAction()(implicit engine: Engine) extends Action with PolybufSerializable {
+class MyAction(implicit engine: Engine) extends Action with PolybufSerializable {
   //PolybufSerializable
   def typeId: Int = MyAction.FIELD
 
@@ -49,4 +49,4 @@ class MyAction()(implicit engine: Engine) extends Action with PolybufSerializabl
   }
 }
 
-class MyEntity()(implicit val engine: Engine) extends Entity
+class MyEntity(implicit val engine: Engine) extends Entity

@@ -7,14 +7,13 @@
 package at.pria.koza.harmonic
 
 import scala.collection.{ immutable, mutable }
-
 import java.lang.String._
 import java.util.EventListener
 import java.util.Random
-
 import at.pria.koza.polybuf.PolybufConfig
 import at.pria.koza.polybuf.PolybufIO
 import at.pria.koza.polybuf.PolybufSerializable
+import at.pria.koza.harmonic.util.ListenerManager
 
 /**
  * <p>
@@ -73,9 +72,6 @@ class Engine(val id: Int) {
   def this() =
     this(false)
 
-  private def fire[T <: EventListener, U](listeners: Seq[T])(action: T => U): Unit =
-    listeners.synchronized { listeners.reverseIterator.foreach(action) }
-
   val config: PolybufConfig = new PolybufConfig()
   def addIO[T <: PolybufSerializable](io: IOFactory[T]): Unit =
     config.add(io.getIO(this))
@@ -85,7 +81,7 @@ class Engine(val id: Int) {
   //States convenience members
   def states: immutable.Map[Long, State] = States.map
 
-  object States {
+  object States extends ListenerManager[StateListener] {
     private[Engine] var map = immutable.Map[Long, State](0l -> RootState)
 
     def contains(id: Long): Boolean = map.contains(id)
@@ -119,13 +115,8 @@ class Engine(val id: Int) {
       _nextStateId
     }
 
-    private val listeners = mutable.ListBuffer[StateListener]()
-
-    def addListener(l: StateListener): Unit = listeners += l
-    def removeListener(l: StateListener): Unit = listeners -= l
-
     private[harmonic] def fireStateAdded(state: State): Unit =
-      fire(listeners) { _.stateAdded(state) }
+      fire { _.stateAdded(state) }
   }
 
   object Entities {
@@ -167,7 +158,7 @@ class Engine(val id: Int) {
   def head = Head()
   def head_=(head: State) = Head() = head
 
-  object Head {
+  object Head extends ListenerManager[HeadListener] {
     private[Engine] var head: List[(State, Action)] = (states(0l), null) :: Nil
     def state = head.head._1
 
@@ -225,21 +216,16 @@ class Engine(val id: Int) {
       fireHeadMoved(old, state)
     }
 
-    private val listeners = mutable.ListBuffer[HeadListener]()
-
-    def addListener(l: HeadListener): Unit = listeners += l
-    def removeListener(l: HeadListener): Unit = listeners -= l
-
     private[harmonic] def fireHeadMoved(prevHead: State, newHead: State): Unit =
       if (prevHead != newHead)
-        fire(listeners) { _.headMoved(prevHead, newHead) }
+        fire { _.headMoved(prevHead, newHead) }
   }
 
   //Branches convenience members
   def currentBranch = Branches.currentBranch
   def currentBranch_=(branch: Branches.Branch) = Branches.currentBranch = branch
 
-  object Branches {
+  object Branches extends ListenerManager[BranchListener] {
     class Branch private[Branches] (val name: String, private var _tip: State) {
       def tip: State = _tip
       def tip_=(newTip: State): State = {
@@ -277,20 +263,15 @@ class Engine(val id: Int) {
 
     //listeners
 
-    private val listeners = mutable.ListBuffer[BranchListener]()
-
-    def addListener(l: BranchListener): Unit = listeners += l
-    def removeListener(l: BranchListener): Unit = listeners -= l
-
     private[harmonic] def fireBranchCreated(engine: Engine, branch: String, tip: State): Unit =
-      fire(listeners) { _.branchCreated(engine, branch, tip) }
+      fire { _.branchCreated(engine, branch, tip) }
 
     private[harmonic] def fireBranchMoved(engine: Engine, branch: String, prevTip: State, newTip: State): Unit =
       if (prevTip != newTip)
-        fire(listeners) { _.branchMoved(engine, branch, prevTip, newTip) }
+        fire { _.branchMoved(engine, branch, prevTip, newTip) }
 
     private[harmonic] def fireBranchDeleted(engine: Engine, branch: String, tip: State): Unit =
-      fire(listeners) { _.branchDeleted(engine, branch, tip) }
+      fire { _.branchDeleted(engine, branch, tip) }
 
     //branch mgmt
 

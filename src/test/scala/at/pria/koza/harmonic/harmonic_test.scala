@@ -49,6 +49,4 @@ class MyAction()(implicit engine: Engine) extends Action with PolybufSerializabl
   }
 }
 
-class MyEntity()(implicit engine: Engine) extends Entity {
-  init()
-}
+class MyEntity()(implicit val engine: Engine) extends Entity

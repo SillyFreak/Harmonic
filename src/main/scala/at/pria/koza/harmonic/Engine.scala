@@ -151,13 +151,13 @@ class Engine(val id: Int) {
       protected[this] override def apply0(): Unit = {
         if (contains(nextEntityId)) throw new IllegalArgumentException("can't redefine an entity")
         entities(nextEntityId) = entity
-        entity.engine(Engine.this, nextEntityId)
+        entity.id = nextEntityId
         nextEntityId += 1
       }
 
       override def revert(): Unit = {
         entities -= entity.id
-        entity.engine(null, -1)
+        entity.id = -1
         nextEntityId -= 1
       }
     }

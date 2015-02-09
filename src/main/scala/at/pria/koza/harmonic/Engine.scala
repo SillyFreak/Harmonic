@@ -13,7 +13,7 @@ import java.util.Random
 import at.pria.koza.polybuf.PolybufConfig
 import at.pria.koza.polybuf.PolybufIO
 import at.pria.koza.polybuf.PolybufSerializable
-import at.pria.koza.harmonic.Modification._
+import at.pria.koza.harmonic.Modification.modification
 import at.pria.koza.harmonic.util.ListenerManager
 
 /**
@@ -137,18 +137,17 @@ class Engine(val id: Int) {
      *
      * @param entity the entity to register in this engine
      */
-    private[harmonic] def +=(entity: Entity): Unit = {
-      if (contains(nextEntityId)) throw new IllegalArgumentException("can't redefine an entity")
-      entities(nextEntityId) = entity
-      entity.id = nextEntityId
-      nextEntityId += 1
-
+    private[harmonic] def +=(entity: Entity): Unit =
       modification {
+        if (contains(nextEntityId)) throw new IllegalArgumentException("can't redefine an entity")
+        entities(nextEntityId) = entity
+        entity.id = nextEntityId
+        nextEntityId += 1
+      } isRevertedBy {
         entities -= entity.id
         entity.id = -1
         nextEntityId -= 1
       }
-    }
   }
 
   //Head convenience members

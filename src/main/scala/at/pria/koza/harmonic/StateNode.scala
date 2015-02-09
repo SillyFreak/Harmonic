@@ -52,8 +52,8 @@ object StateNode extends IOFactory[StateNode] {
       val p = obj.getExtension(extension)
       engine.states.get(p.getId()) match {
         case Some(state) =>
-          if (state.root) throw new AssertionError("trying to deserialize the root state")
-          else state.state
+          assert(!state.root, "trying to deserialize the root state")
+          state.state
         case None =>
           val node = new StateNode(p.getId(), p.getParent(), p.getAction())
           engine.States += node
@@ -90,8 +90,8 @@ case class StateNode private[harmonic] (val id: Long, val parentId: Long, val ac
       try {
         new PolybufOutput(engine.config).writeObject(action)
       } catch {
-        case ex: PolybufException => throw new IllegalArgumentException(
-          "can't serialize action; try registering the IOFactory", ex);
+        case ex: PolybufException =>
+          throw new IllegalArgumentException("can't serialize action; try registering the IOFactory", ex);
       })
 
   /**

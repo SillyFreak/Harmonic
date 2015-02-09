@@ -38,13 +38,13 @@ object MyAction extends IOFactory[MyAction] {
   }
 }
 
-class MyAction(implicit engine: Engine) extends Action with PolybufSerializable {
+class MyAction extends Action with PolybufSerializable {
   //PolybufSerializable
   def typeId: Int = MyAction.FIELD
 
   var entityId: Int = -1
 
-  protected[this] def apply0(): Unit = {
+  protected[this] def apply(implicit engine: Engine): Unit = {
     entityId = new MyEntity().id
   }
 }

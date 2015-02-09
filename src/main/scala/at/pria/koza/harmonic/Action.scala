@@ -8,6 +8,12 @@ package at.pria.koza.harmonic
 
 import scala.util.DynamicVariable
 
+object Action {
+  private val action = new DynamicVariable[Action](null)
+
+  def value = action.value
+}
+
 /**
  * <p>
  * The class `Action` represents a high-level change that can happen in the `Engine`. An `Action` causes one or
@@ -22,70 +28,36 @@ import scala.util.DynamicVariable
  * engine, this should ensure the expected behavior.
  * </p>
  *
- * @version V1.0 26.07.2013
+ * @version V1.0 09.01.2015
  * @author SillyFreak
  */
-object Action {
-  private val action = new DynamicVariable[Action](null)
-
-  def value = action.value
-}
-
-/**
- * <p>
- * Creates a new action that modifies the given engine.
- * </p>
- *
- * @param engine the engine that is modified by this action
- */
-abstract class Action {
-  private var _modifications = List[Modification]()
+trait Action {
+  private[this] var _modifications = List.empty[Modification]
 
   /**
-   * <p>
-   * Applies the action to the engine. This method should only be called by `Engine.setHead(State)`. This  method
-   * invokes `apply0()`, surrounded by calls to `push(Action)`, and `pop(Action)` in a `finally` block to always
-   * leave the action stack in a well defined way. Note that this does not mean that the engine, too, will be in a
-   * defined state; see `apply0()`.
-   * </p>
+   * Adds a `Modification` for reverting a single change caused by this action. This method must only be called
+   * by `Modification.revertBy`.
    */
-  private[harmonic] def apply(): Unit = {
-    Action.action.withValue(this) {
-      apply0()
-    }
-  }
-
-  /**
-   * <p>
-   * Reverts the action by reverting every `Modification` in reverse order. This method must only be called by the
-   * `Engine`. When this method is called, the engine will be in the same state as it was after applying this
-   * action.
-   * </p>
-   */
-  private[harmonic] def revert(): Unit = {
-    while (!_modifications.isEmpty) {
-      val (m :: ms) = _modifications
-      m.revert()
-      _modifications = ms
-    }
-  }
-
-  /**
-   * <p>
-   * Called by `Modification.addToAction()`. Adds a `Modification` to this action so that it can be subsequently
-   * reverted.
-   * </p>
-   *
-   * @param m the `Modification` to add
-   */
-  private[harmonic] def addModification(m: Modification): Unit = {
+  private[harmonic] def +=(m: Modification): Unit =
     _modifications = m :: _modifications
-  }
+
+  /**
+   * Establishes the action in `Action.value` and calls `apply()`. This method must only be called by the engine.
+   */
+  private[harmonic] def execute(implicit engine: Engine): Unit =
+    Action.action.withValue(this) { apply }
+
+  /**
+   * Reverts the action by calling `revert()` on all registered modifications in reverse order. This method must
+   * only be called by the engine.
+   */
+  private[harmonic] def revert(): Unit =
+    _modifications = _modifications.dropWhile { m => m.revert(); true }
 
   /**
    * <p>
-   * Performs the actual action. This method must only be called from `apply()`, where it will have an `Action`
-   * context established for `Modification`s via the `get()` method.
+   * Performs the actual action. This method must only be called from `execute()`, which makes the action available
+   * via `Action.value`, which is necessary for `Modification`s to work.
    * </p>
    * <p>
    * Note that this method is responsible for leaving the `Engine` in a well-defined state. If it does not return
@@ -93,5 +65,5 @@ abstract class Action {
    * in a state where reverting this action really does revert it into the previous state.
    * </p>
    */
-  protected[this] def apply0(): Unit
+  protected[this] def apply(implicit engine: Engine): Unit
 }

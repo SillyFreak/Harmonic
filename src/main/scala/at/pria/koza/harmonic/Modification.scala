@@ -11,7 +11,7 @@ object Modification {
     override def revert(): Unit = mod
   }
 
-  def revertBy(mod: Modification): Unit = Action.value.addModification(mod)
+  def revertBy(mod: Modification): Unit = Action.value += mod
 
   def modification[U](mod: => U): ModificationWord[U] = ModificationWord(() => mod)
   case class ModificationWord[U](apply: () => U) {

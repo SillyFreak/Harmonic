@@ -204,7 +204,7 @@ class Engine(val id: Int) {
           //get the tail first, otherwise deserializing won't work
           val tail = forward(head, state.parent)
           val action = state.state.deserializedAction(Engine.this)
-          action.apply()
+          action.execute(Engine.this)
           (state, action) :: tail
         }
       this.head = forward(this.head, head)

@@ -38,6 +38,11 @@ object Action {
  */
 trait Action {
   private[this] var _modifications = List.empty[Modification]
+  private[this] var _engine: Option[Engine] = None
+  protected[this] implicit def engine = _engine match {
+    case Some(engine) => engine
+    case None         => throw new IllegalStateException("not in apply()")
+  }
 
   /**
    * Adds a `Modification` for reverting a single change caused by this action. This method must only be called
@@ -49,8 +54,11 @@ trait Action {
   /**
    * Establishes the action in `Action.value` and calls `apply()`. This method must only be called by the engine.
    */
-  private[harmonic] def execute(implicit engine: Engine): Unit =
-    Action.action.withValue(this) { apply }
+  private[harmonic] def execute(implicit engine: Engine): Unit = Action.action.withValue(this) {
+    _engine = Some(engine)
+    try apply()
+    finally _engine = None
+  }
 
   /**
    * Reverts the action by calling `revert()` on all registered modifications in reverse order. This method must
@@ -70,5 +78,5 @@ trait Action {
    * in a state where reverting this action really does revert it into the previous state.
    * </p>
    */
-  protected[this] def apply(implicit engine: Engine): Unit
+  protected[this] def apply(): Unit
 }

@@ -44,7 +44,7 @@ class MyAction extends Action with PolybufSerializable {
 
   var entityId: Int = -1
 
-  protected[this] def apply(implicit engine: Engine): Unit = {
+  protected[this] def apply(): Unit = {
     entityId = new MyEntity().id
   }
 }

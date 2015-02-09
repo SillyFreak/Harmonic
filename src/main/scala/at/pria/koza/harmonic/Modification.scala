@@ -13,11 +13,12 @@ object Modification {
 
   def revertBy(mod: Modification): Unit = Action.value.addModification(mod)
 
-  def modification(mod: => Unit): ModificationWord = ModificationWord(() => mod)
-  case class ModificationWord(apply: () => Unit) {
-    def isRevertedBy(revert: => Unit): Unit = {
-      apply()
+  def modification[U](mod: => U): ModificationWord[U] = ModificationWord(() => mod)
+  case class ModificationWord[U](apply: () => U) {
+    def isRevertedBy(revert: => Unit): U = {
+      val result = apply()
       revertBy(Modification(revert))
+      result
     }
   }
 }

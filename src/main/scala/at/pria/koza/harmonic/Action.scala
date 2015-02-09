@@ -11,7 +11,12 @@ import scala.util.DynamicVariable
 object Action {
   private val action = new DynamicVariable[Action](null)
 
-  def value = action.value
+  /**
+   * The currently executing Action, or `null` if no action is executing. This is used by `Modification.revertBy`.
+   * It has little use beyond that, because the Action trait only defines methods that are limited to use inside
+   * the engine-
+   */
+  private[harmonic] def current = action.value
 }
 
 /**

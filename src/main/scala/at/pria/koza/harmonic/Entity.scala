@@ -20,9 +20,15 @@ import java.io.Serializable
  */
 trait Entity {
   val engine: Engine
-  private var _id: Int = _
-  def id: Int = _id
-  def id_=(id: Int): Unit = _id = id
+  private[this] var _id: Option[Int] = None
+  def id: Int = _id match {
+    case Some(id) => id
+    case None     => throw new AssertionError()
+  }
+  private[harmonic] def id_=(id: Int): Unit = _id match {
+    case Some(_) => throw new AssertionError()
+    case None    => _id = Some(id)
+  }
 
   engine.Entities += this
 

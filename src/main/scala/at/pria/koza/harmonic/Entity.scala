@@ -25,6 +25,10 @@ trait Entity {
     case Some(id) => id
     case None     => throw new AssertionError()
   }
+  private[harmonic] def resetId(): Unit = _id match {
+    case Some(_) => _id = None
+    case None    => throw new AssertionError()
+  }
   private[harmonic] def id_=(id: Int): Unit = _id match {
     case Some(_) => throw new AssertionError()
     case None    => _id = Some(id)

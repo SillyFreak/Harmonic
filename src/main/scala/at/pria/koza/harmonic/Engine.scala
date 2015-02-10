@@ -145,7 +145,7 @@ class Engine(val id: Int) {
         nextEntityId += 1
       } isRevertedBy {
         entities -= entity.id
-        entity.id = -1
+        entity.resetId()
         nextEntityId -= 1
       }
   }
